@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardBackgroundColor="@color/gray_50">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="15dp">
+
+        <!-- Horizontal layout for icon and Agent ID button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Circular icon -->
+            <ImageView
+                android:id="@+id/iconCircle"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:src="@drawable/ic_circle_icon"
+                android:contentDescription="Agent Icon"/>
+
+            <!-- Space between icon and Agent ID button -->
+            <Space
+                android:layout_width="16dp"
+                android:layout_height="match_parent"/>
+
+            <!-- Agent ID button -->
+            <Button
+                android:id="@+id/btnAgentId"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:text="Agent ID"
+                android:textAlignment="textStart"
+                android:textColor="@android:color/white"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <!-- Additional text -->
+        <TextView
+            android:id="@+id/tvAdditionalText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@android:color/black"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="Agent.Description" />
+
+        <!-- Read More button -->
+        <Button
+            android:id="@+id/btnReadMore"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Read More"
+            android:textSize="8sp"
+            android:background="@android:color/transparent"
+            android:textColor="@color/purple_200" />
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

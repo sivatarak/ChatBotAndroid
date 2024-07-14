@@ -1,0 +1,7 @@
+<!-- res/anim/rotate_animation.xml -->
+<rotate xmlns:android="http://schemas.android.com/apk/res/android"
+    android:fromDegrees="0"
+    android:toDegrees="360"
+    android:pivotX="50%"
+    android:repeatCount="infinite"
+    android:duration="1000" />

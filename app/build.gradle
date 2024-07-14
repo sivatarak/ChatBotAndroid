@@ -1,0 +1,151 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+
+    // Add the Google services Gradle plugin
+    id 'com.google.gms.google-services'
+
+    // Dependency Injection
+    id 'kotlin-kapt'
+    id 'dagger.hilt.android.plugin'
+
+    // Serialization
+    id 'kotlinx-serialization'
+}
+
+android {
+    namespace 'com.chatgptlite.wanted'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.chatgptlite.wanted"
+        minSdk 24
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary true
+        }
+    }
+
+    buildTypes {
+        release {
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            debuggable false                // make app non-debuggable
+            crunchPngs true                 // shrink images
+            minifyEnabled true              // obfuscate code and remove unused code
+            shrinkResources true            // shrink and remove unused resources
+            multiDexEnabled true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    buildFeatures {
+        compose true
+        dataBinding true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.0'
+    }
+
+    packagingOptions {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            force "org.jetbrains:annotations:23.0.0"
+            exclude group: 'com.intellij', module: 'annotations'
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
+    implementation 'androidx.activity:activity-compose:1.7.0'
+    implementation "androidx.compose.ui:ui:1.6.0"
+    implementation "androidx.compose.ui:ui-tooling-preview:1.6.0"
+    implementation 'androidx.compose.material3:material3:1.1.0-beta01'
+    implementation 'androidx.compose.ui:ui-viewbinding:1.4.0'
+    implementation 'androidx.compose.ui:ui-util:1.4.0'
+    implementation 'androidx.compose.material:material-icons-extended:1.4.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose-android:2.8.2'
+    implementation 'androidx.room:room-compiler:2.6.1'
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.6.0"
+    debugImplementation "androidx.compose.ui:ui-tooling:1.6.0"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:1.6.0"
+
+    def nav_version = "2.5.3"
+    implementation("androidx.navigation:navigation-compose:$nav_version")
+    implementation("io.coil-kt:coil-compose:2.3.0")
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
+
+    // System bars customization
+    implementation "com.google.accompanist:accompanist-systemuicontroller:0.28.0"
+    implementation "androidx.compose.ui:ui-viewbinding:1.4.0"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1"
+
+    implementation "androidx.fragment:fragment-ktx:1.4.0"
+
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1'
+
+    // Vosk Speech Recognition Library
+    implementation("com.alphacephei:vosk-android:0.3.32")
+    implementation 'net.java.dev.jna:jna:5.13.0'
+
+    // Firebase BOM
+    implementation platform('com.google.firebase:firebase-bom:32.0.0')
+    implementation 'com.google.firebase:firebase-analytics-ktx'
+    implementation 'com.google.firebase:firebase-auth-ktx'
+    implementation 'com.google.firebase:firebase-firestore-ktx'
+
+    // Dependency injection
+    implementation "com.google.dagger:hilt-android:2.48"
+    kapt "com.google.dagger:hilt-compiler:2.48"
+    implementation "androidx.hilt:hilt-navigation-compose:1.0.0"
+    implementation 'com.google.code.gson:gson:2.9.0'
+
+    // Networking
+    def retrofit_version = '2.9.0'
+    def okhttp_version = '4.10.0'
+    implementation "com.squareup.retrofit2:retrofit:$retrofit_version"
+    implementation "com.squareup.retrofit2:converter-gson:$retrofit_version"
+    implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
+    implementation "com.squareup.okhttp3:logging-interceptor:$okhttp_version"
+
+    // UI/UX Utils
+    def richtext_version = '0.16.0'
+    implementation "com.halilibo.compose-richtext:richtext-commonmark:${richtext_version}"
+    implementation "com.halilibo.compose-richtext:richtext-ui-material:${richtext_version}"
+    implementation "com.halilibo.compose-richtext:richtext-ui-material3:${richtext_version}"
+
+    // ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+
+    // ConstraintLayout
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'com.google.android.material:material:1.12.0'
+}
+
+// Allow references to generated code
+kapt {
+    correctErrorTypes true
+}
