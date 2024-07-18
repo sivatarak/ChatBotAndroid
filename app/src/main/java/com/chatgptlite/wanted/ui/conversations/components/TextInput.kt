@@ -3,6 +3,7 @@ package com.chatgptlite.wanted.ui.conversations.components
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,7 +25,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chatgptlite.wanted.ui.conversations.ConversationViewModel
-import com.chatgptlite.wanted.utils.VoskSpeechRecognizerHelper
 import kotlinx.coroutines.launch
 
 @Composable
@@ -34,7 +34,9 @@ fun TextInput(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val isLoading by conversationViewModel.isLoading.collectAsState()
-
+    val isInitializationFailed by conversationViewModel.isInitializationFailed.collectAsState()
+    Log.d("TextInput", "Using ViewModel instance in textinput.kt: ${conversationViewModel.getInstanceId()}")
+    print(isInitializationFailed)
     LaunchedEffect(selectedQuestion) {
         if (selectedQuestion.isNotEmpty()) {
             coroutineScope.launch {
@@ -53,7 +55,8 @@ fun TextInput(
                 conversationViewModel.sendMessage(text)
             }
         },
-        isLoading = isLoading
+        isLoading = isLoading,
+        isInitializationFailed = isInitializationFailed // Pass the new flag
     )
 }
 
@@ -63,12 +66,12 @@ private fun TextInputIn(
     selectedQuestion: String,
     sendMessage: (String) -> Unit,
     isLoading: Boolean,
+    isInitializationFailed: Boolean, // New parameter
     conversationViewModel: ConversationViewModel = hiltViewModel()
 ) {
     var text by remember { mutableStateOf(TextFieldValue()) }
     var micActive by remember { mutableStateOf(false) }
     val context = LocalContext.current as Activity
-    val speechRecognizerHelper = remember { VoskSpeechRecognizerHelper(context) }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -113,7 +116,7 @@ private fun TextInputIn(
                             unfocusedBorderColor = Color.Transparent,
                             focusedTextColor = Color.White,
                         ),
-                        enabled = !isLoading
+                        enabled = !isLoading && !isInitializationFailed // Disable based on the flag
                     )
                     IconButton(
                         onClick = {
@@ -124,44 +127,16 @@ private fun TextInputIn(
                                 conversationViewModel.setShowAgent(false)
                             }
                         },
-                        enabled = !isLoading
+                        enabled = !isLoading && !isInitializationFailed // Disable based on the flag
                     ) {
                         Icon(
                             Icons.Filled.Send,
                             "sendMessage",
                             modifier = Modifier.size(26.dp),
-                            tint = if (isLoading) Color.Gray else MaterialTheme.colorScheme.primary,
+                            tint = if (isLoading || isInitializationFailed) Color.Gray else MaterialTheme.colorScheme.primary,
                         )
                     }
-                    IconButton(
-                        onClick = {
-                            if (ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.RECORD_AUDIO
-                                ) == PackageManager.PERMISSION_GRANTED
-                            ) {
-                                micActive = !micActive
-                                if (micActive) {
-                                    speechRecognizerHelper.startListening { recognizedText ->
-                                        println("Recognized Text: $recognizedText")
-                                        text = TextFieldValue(recognizedText)
-                                    }
-                                } else {
-                                    speechRecognizerHelper.stopListening()
-                                }
-                            } else {
-                                requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
-                        },
-                        enabled = !isLoading
-                    ) {
-                        Icon(
-                            imageVector = if (micActive) Icons.Filled.Mic else Icons.Filled.MicOff,
-                            contentDescription = if (micActive) "Deactivate Mic" else "Activate Mic",
-                            modifier = Modifier.size(26.dp),
-                            tint = if (isLoading) Color.Gray else MaterialTheme.colorScheme.primary,
-                        )
-                    }
+
                 }
             }
         }
@@ -174,6 +149,7 @@ fun PreviewTextInput() {
     TextInputIn(
         selectedQuestion = "",
         sendMessage = {},
-        isLoading = false
+        isLoading = false,
+        isInitializationFailed = false
     )
 }

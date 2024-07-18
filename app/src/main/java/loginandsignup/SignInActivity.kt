@@ -3,62 +3,72 @@ package loginandsignup
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.View
+import android.widget.EditText
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chatgptlite.wanted.MainActivity
+import com.chatgptlite.wanted.R
 import com.chatgptlite.wanted.constants.Agent
-import com.chatgptlite.wanted.constants.ApiRequest
 import com.chatgptlite.wanted.constants.Data1
 import com.chatgptlite.wanted.constants.RetrofitInstance
 import com.chatgptlite.wanted.constants.SessionManager
-import com.chatgptlite.wanted.constants.UserIdWrapper
-import com.chatgptlite.wanted.databinding.ActivitySignInBinding
-import com.chatgptlite.wanted.models.MessageModel
 import com.chatgptlite.wanted.ui.conversations.ConversationViewModel
+import com.google.gson.JsonParser
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import loginandsignup.SignInActivity.SignInUtils.initialInstances
-import org.json.JSONArray
 import org.json.JSONObject
+
 @AndroidEntryPoint
 class SignInActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivitySignInBinding
+    private lateinit var emailEditText: EditText
+    private lateinit var passwordEditText: EditText
+    private lateinit var progressOverlay: View
+
     private val viewModel: ConversationViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivitySignInBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        binding.button.setOnClickListener {
-            val email = binding.emailEt.text.toString()
-            val pass = binding.passET.text.toString()
+        setContentView(R.layout.activity_sign_in)
+
+        // Initialize the UI components
+        emailEditText = findViewById(R.id.emailEt)
+        passwordEditText = findViewById(R.id.passET)
+        progressOverlay = findViewById(R.id.progress_overlay)
+
+        findViewById<View>(R.id.button).setOnClickListener {
+            val email = emailEditText.text.toString()
+            val pass = passwordEditText.text.toString()
 
             if (email.isNotEmpty() && pass.isNotEmpty()) {
-                login(email, pass)
+                // Show the progress overlay
+                progressOverlay.visibility = View.VISIBLE
+
+                // Launch a coroutine from the Main dispatcher
+                CoroutineScope(Dispatchers.Main).launch {
+                    login(email, pass)
+                }
             } else {
                 Toast.makeText(this, "Empty Fields Are not Allowed !!", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-
-
-
-    private fun login(username: String, password: String) {
+    private suspend fun login(username: String, password: String) {
         val sharedPreferences: SharedPreferences = getSharedPreferences("user_prefs", MODE_PRIVATE)
-        val isLoggedIn = sharedPreferences.getBoolean("is_logged_in", true)
+        val isLoggedIn = sharedPreferences.getBoolean("is_logged_in", false)
 
         if (isLoggedIn) {
-            // User is already logged in, call agents service
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    // Create a LoginRequest instance with the provided data
                     val loginRequest = Data1(
                         userId = "acb76b9c-f859-449c-b3e3-136982dae973",
                         sessionId = "acb76b9c-f859-449c-b3e3-136982dae973",
@@ -66,17 +76,14 @@ class SignInActivity : AppCompatActivity() {
                         role = "R1"
                     )
 
-                    // Call agents service with the loginRequest
                     val response = RetrofitInstance.apiService.getAgents(loginRequest).execute()
                     if (response.isSuccessful) {
                         val responseBody = response.body()?.string()
                         println("Response Body: $responseBody")
 
                         val jsonResponse = JSONObject(responseBody)
-                        // Assuming the field is named "agentIds" in the actual response
                         val agentIdsObject = jsonResponse.getJSONObject("agentIds")
 
-                        // Convert JSONObject to Map<String, Agent>
                         val agentsMap = mutableMapOf<String, Agent>()
                         val keys = agentIdsObject.keys()
                         while (keys.hasNext()) {
@@ -88,73 +95,65 @@ class SignInActivity : AppCompatActivity() {
                             )
                             agentsMap[key] = agent
                         }
-                        val firstAgent = agentsMap.keys.first()
-                        println(firstAgent)
-                        // Update SessionManager with the Map
+
                         SessionManager.agents = agentsMap
+                        val firstAgent = agentsMap.keys.first()
                         val firstAgentName: String? = agentsMap.values.firstOrNull()?.name
                         SessionManager.selectedAgentId = firstAgentName ?: ""
                         val reqAgentId = SessionManager.agents.entries.find { it.value.name == firstAgentName }?.key
-                        // Initialize instances and handle response
-                        val initResponseCode = initialInstances(reqAgentId!!)
+                        val initResponseCode = SignInUtils.initialInstances(reqAgentId!!)
                         if (initResponseCode == 200) {
-
-
-
-                            handleLoginSuccess() // Common function for handling login success
+                            withContext(Dispatchers.Main) {
+                                handleLoginSuccess()
+                            }
                         } else {
                             println("Initialization failed with code: $initResponseCode")
-                            handleLoginFailure() // Common function for handling login failure
+                            withContext(Dispatchers.Main) {
+                                handleLoginFailure()
+                            }
                         }
                     } else {
-                        // Handle unsuccessful response
                         val errorBody = response.errorBody()?.string()
                         println("Error Response: $errorBody")
-                        handleLoginFailure() // Common function for handling login failure
+                        withContext(Dispatchers.Main) {
+                            handleLoginFailure()
+                        }
                     }
                 } catch (e: Exception) {
-                    // Handle exception
                     println("Exception: ${e.message}")
-                    handleLoginFailure() // Common function for handling login failure
+                    withContext(Dispatchers.Main) {
+                        handleLoginFailure()
+                    }
                 }
             }
         } else {
-            // Mock a successful response (for demonstration, replace with actual login logic)
-            val editor = sharedPreferences.edit()
-            editor.putBoolean("is_logged_in", true)
-            editor.apply()
+            with(sharedPreferences.edit()) {
+                putBoolean("is_logged_in", true)
+                apply()
+            }
 
-            handleLoginSuccess() // Common function for handling login success
+            handleLoginSuccess()
         }
     }
 
-
-
     private fun handleLoginSuccess() {
-        // Assume agents are already stored in SessionManager
+        progressOverlay.visibility = View.GONE
         val agents = SessionManager.agents
         println("Agents: $agents")
-
-        // You can also set agentIds if needed
-       // val agentIds = agents.mapValues { it.value.name }
-        //SessionManager.agentIds = agentIds
 
         openMainActivity()
     }
 
     private fun handleLoginFailure() {
-        // Mock data for demonstration
+
         val agents = mapOf(
             "A1" to Agent(name = "Resume", description = "The Resume Intelligence System..."),
             "A2" to Agent(name = "Law", description = "The Law Intelligence System...")
         )
         SessionManager.agents = agents
-
-        // Also set agentIds if needed
-        val agentIds = agents.mapValues { it.value.name }
-       // SessionManager.agentIds = agentIds
-
+        progressOverlay.visibility = View.GONE
         openMainActivity()
+        //Toast.makeText(this, "Network error occurred. Please try again.", Toast.LENGTH_SHORT).show()
     }
 
     object SignInUtils {
@@ -164,31 +163,53 @@ class SignInActivity : AppCompatActivity() {
                     val data = Data1(
                         userId = "acb76b9c-f859-449c-b3e3-136982dae973",
                         sessionId = "acb76b9c-f859-449c-b3e3-136982dae973",
-                        hierarchyId = "xyac",
+                        hierarchyId = "",
                         role = "R1",
                         agentId = agentId
                     )
                     val response = RetrofitInstance.apiService.initializeInstances(data).execute()
                     if (response.isSuccessful) {
-                        return@withContext 200
+                        val responseBody = response.body()?.string()
+                        println(responseBody)
+
+                        if (responseBody != null) {
+                            val jsonObject = JsonParser.parseString(responseBody).asJsonObject
+                            val statusCode = jsonObject.get("status_code")?.asInt
+
+                            if (statusCode == 200) {
+                                200
+                            } else {
+                                val errorDetail = jsonObject.get("detail")?.asString
+
+                                println("Response was not successful. Error detail: $errorDetail")
+                                if (statusCode == 500) {
+                                 //   viewModel.setInitializationFailed(true)
+                                }
+                                statusCode ?: response.code()
+                            }
+                        } else {
+                            println("Response was not successful. Empty body.")
+                            response.code()
+                        }
                     } else {
-                        return@withContext response.code()
+                        val errorBody = response.errorBody()?.string()
+                        println("Response was not successful. Error body: $errorBody")
+                        response.code()
                     }
                 } catch (e: Exception) {
                     println("Exception: ${e.message}")
-                    return@withContext 500
+                    500
                 }
             }
         }
     }
 
 
+
     private fun openMainActivity() {
+        progressOverlay.visibility = View.GONE
         val intent = Intent(this@SignInActivity, MainActivity::class.java)
         startActivity(intent)
         finish()
     }
-
-
-
 }

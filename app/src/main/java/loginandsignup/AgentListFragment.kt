@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
+import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Toast
@@ -13,6 +15,8 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -23,8 +27,8 @@ import com.chatgptlite.wanted.constants.Data1
 import com.chatgptlite.wanted.constants.QuestionReqData
 import com.chatgptlite.wanted.constants.RetrofitInstance
 import com.chatgptlite.wanted.constants.SessionManager
-import com.chatgptlite.wanted.constants.UserIdWrapper
 import com.chatgptlite.wanted.ui.conversations.ConversationViewModel
+import com.chatgptlite.wanted.ui.conversations.ConversationViewModel_Factory
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,14 +42,19 @@ class AgentListFragment : AppCompatActivity(), AgentAdapter.AgentClickListener {
 
     private lateinit var agentAdapter: AgentAdapter
     private lateinit var allAgents: List<Agent>  // Updated to use List<Agent>
+  //  private val viewModel: ConversationViewModel.
+
     private val viewModel: ConversationViewModel by viewModels()
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.fragment_agent_list)
         setupToolbar()
         setupRecyclerView()
         setupSearchView()
+        Log.d("AgentListFragment", "Using ViewModel instance: ${viewModel.getInstanceId()}")
     }
 
     private fun setupToolbar() {
@@ -155,11 +164,18 @@ class AgentListFragment : AppCompatActivity(), AgentAdapter.AgentClickListener {
             if (initResponseCode == 200) {
                 startNewConversation(agentId)
             } else {
+                showInitializationFailedToast()
+                startNewConversation(agentId)
+                viewModel.setInitializationFailed(true) // Correctly set the flag
                 println("Initialization failed with code: $initResponseCode")
             }
         }
     }
-
+    private fun showInitializationFailedToast() {
+        val toast = Toast.makeText(this, "Initialization failed", Toast.LENGTH_SHORT)
+        toast.setGravity(Gravity.CENTER, 0, 0)
+        toast.show()
+    }
 
     private suspend fun startNewConversation(agentId: String) {
         Log.d(TAG, "Starting new conversation with agentId: $agentId")
@@ -167,6 +183,7 @@ class AgentListFragment : AppCompatActivity(), AgentAdapter.AgentClickListener {
         val intent = Intent(this@AgentListFragment, MainActivity::class.java)
         intent.putExtra("setShowAgent", true)
         delay(100)
+
         // After the new conversation is started, navigate to MainActivity
         openMainActivity(agentId)
     }
@@ -187,4 +204,6 @@ class AgentListFragment : AppCompatActivity(), AgentAdapter.AgentClickListener {
         val lowerCaseQuery = query.toLowerCase(Locale.ROOT)
         return allAgents.filter { it.name.toLowerCase(Locale.ROOT).contains(lowerCaseQuery) }
     }
+
+
 }

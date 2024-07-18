@@ -5,142 +5,129 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.vosk.Model
-import org.vosk.Recognizer
-import org.vosk.android.SpeechService
-import org.vosk.android.RecognitionListener
-import java.io.*
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import java.io.File
+import java.io.FileInputStream
+import java.io.IOException
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
 
-class VoskSpeechRecognizerHelper(private val context: Context) {
-    private var model: Model? = null
-    private var recognizer: Recognizer? = null
-    private var speechService: SpeechService? = null
+class TFLiteModel(private val context: Context) {
+//    private val modelFileName = "whisper-tiny.tflite"
+//    private val modelUrl = "https://your-server.com/path/to/whisper-tiny.tflite"
 
-    private val modelPath = "model"
-    private val modelUrl = "openai/whisper-tiny"  // Replace with your model URL
-    private val modelFileName = "vosk-model-small-en-us-0.15.zip"
+    private val huggingFaceApiKey = "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" // Add your Hugging Face API key here
+    private val huggingFaceApiUrl = "https://api-inference.huggingface.co/models/openai/whisper-small" // Update with the correct endpoint if necessary
 
-    init {
-        initModel()
+//    fun initializeModel(onModelReady: () -> Unit, onError: (Exception) -> Unit) {
+//        val modelFile = File(context.filesDir, modelFileName)
+//        if (modelFile.exists()) {
+//            loadModel(modelFile, onModelReady, onError)
+//        } else {
+//            downloadModel(modelFile, onModelReady, onError)
+//        }
+//    }
+
+//    private fun loadModel(modelFile: File, onModelReady: () -> Unit, onError: (Exception) -> Unit) {
+//        CoroutineScope(Dispatchers.IO).launch {
+//            try {
+//                // Load the model here if needed for local inference
+//                // interpreter = Interpreter(loadModelFile(modelFile))
+//                withContext(Dispatchers.Main) {
+//                    onModelReady()
+//                }
+//            } catch (e: IOException) {
+//                withContext(Dispatchers.Main) {
+//                    onError(e)
+//                }
+//            }
+//        }
+//    }
+
+    @Throws(IOException::class)
+    private fun loadModelFile(modelFile: File): MappedByteBuffer {
+        val inputStream = FileInputStream(modelFile)
+        val fileChannel = inputStream.channel
+        val startOffset = 0L
+        val declaredLength = modelFile.length()
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
     }
 
-    private fun initModel() {
-        val modelFile = File(context.filesDir, modelPath)
-        if (modelFile.exists()) {
-            loadModel(modelFile)
-        } else {
-            downloadAndExtractModel()
-        }
-    }
+//    private fun downloadModel(modelFile: File, onModelReady: () -> Unit, onError: (Exception) -> Unit) {
+//        CoroutineScope(Dispatchers.IO).launch {
+//            try {
+//                val url = URL(modelUrl)
+//                val connection: HttpURLConnection = url.openConnection() as HttpURLConnection
+//                connection.connect()
+//                val inputStream: InputStream = connection.inputStream
+//                val outputStream = FileOutputStream(modelFile)
+//                val buffer = ByteArray(1024)
+//                var bytesRead: Int
+//                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+//                    outputStream.write(buffer, 0, bytesRead)
+//                }
+//                outputStream.close()
+//                inputStream.close()
+//                loadModel(modelFile, onModelReady, onError)
+//            } catch (e: Exception) {
+//                withContext(Dispatchers.Main) {
+//                    onError(e)
+//                }
+//            }
+//        }
+//    }
 
-    private fun loadModel(modelFile: File) {
+    fun transcribeAudioUsingHuggingFace(audioFile: File, onSuccess: (String) -> Unit, onError: (Exception) -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                model = Model(modelFile.absolutePath)  // Correctly create a Model instance
-                Log.i("Vosk", "Model loaded successfully")
-            } catch (e: Exception) {
-                Log.e("Vosk", "Failed to load model: ${e.message}")
-            }
-        }
-    }
+                val client = OkHttpClient()
+                val mediaType = "audio/wav"?.toMediaTypeOrNull() // Update the media type according to your audio file format
+                val requestBody = RequestBody.create(mediaType, audioFile)
+                val request = Request.Builder()
+                    .url(huggingFaceApiUrl)
+                    .post(requestBody)
+                    .addHeader("Authorization", "Bearer $huggingFaceApiKey")
+                    .addHeader("Content-Type", "audio/wav") // Update as needed
+                    .build()
 
-    private fun downloadAndExtractModel() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val zipFile = downloadFile(context, modelUrl, modelFileName)
-            zipFile?.let {
-                withContext(Dispatchers.IO) {
-                    try {
-                        val unzipFile = File(context.filesDir, modelPath)
-                        unzip(zipFile, unzipFile)
-                        loadModel(unzipFile)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
-        }
-    }
-
-    private fun unzip(zipFile: File, targetDir: File) {
-        ZipInputStream(BufferedInputStream(FileInputStream(zipFile))).use { zis ->
-            var ze: ZipEntry?
-            val buffer = ByteArray(1024)
-            while (zis.nextEntry.also { ze = it } != null) {
-                val file = File(targetDir, ze!!.name)
-                if (ze!!.isDirectory) {
-                    file.mkdirs()
-                } else {
-                    FileOutputStream(file).use { fos ->
-                        var len: Int
-                        while (zis.read(buffer).also { len = it } > 0) {
-                            fos.write(buffer, 0, len)
+                client.newCall(request).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            onError(e)
                         }
                     }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        if (response.isSuccessful) {
+                            val responseData = response.body?.string()
+                            Log.d("TFLiteModel", "Transcription result: $responseData")
+                            CoroutineScope(Dispatchers.Main).launch {
+                                onSuccess(responseData ?: "No response data")
+                            }
+                        } else {
+                            Log.e("TFLiteModel", "Error: ${response.code}")
+                            CoroutineScope(Dispatchers.Main).launch {
+                                onError(IOException("HTTP Error: ${response.code}"))
+                            }
+                        }
+                    }
+                })
+            } catch (e: Exception) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    onError(e)
                 }
             }
         }
     }
 
-    private fun downloadFile(context: Context, url: String, fileName: String): File? {
-        val file = File(context.filesDir, fileName)
-        if (file.exists()) {
-            return file
-        }
-
-        try {
-            val urlConnection = URL(url).openConnection() as HttpURLConnection
-            urlConnection.connect()
-            val inputStream: InputStream = urlConnection.inputStream
-            val outputStream = FileOutputStream(file)
-            val buffer = ByteArray(4096)
-            var bytesRead: Int
-            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                outputStream.write(buffer, 0, bytesRead)
-            }
-            outputStream.close()
-            inputStream.close()
-            return file
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-        return null
-    }
-
-    fun startListening(listener: (String) -> Unit) {
-        model?.let {
-            recognizer = Recognizer(it, 16000.0f)
-            speechService = SpeechService(recognizer, 16000.0f)
-            speechService?.startListening(object : RecognitionListener {
-                override fun onResult(result: String) {
-                    listener(result)
-                }
-
-                override fun onPartialResult(partialResult: String) {
-                    // Handle partial results if needed
-                }
-
-                override fun onError(e: Exception) {
-                    Log.e("Vosk", "Recognition error: ${e.message}")
-                }
-
-                override fun onTimeout() {
-                    // Handle timeout if needed
-                }
-
-                override fun onFinalResult(hypothesis: String) {
-                    listener(hypothesis)
-                }
-            })
-        }
-    }
-
-    fun stopListening() {
-        speechService?.stop()
-        speechService?.shutdown()
+    // Add methods for local inference if needed
+    fun runInference(input: FloatArray): FloatArray {
+        // Placeholder for local model inference if needed
+        // val output = FloatArray(1) // Adjust the size based on your model
+        // interpreter.run(input, output)
+        // Log.d("TFLiteModel", "Inference result: ${output[0]}")
+        // return output
+        throw NotImplementedError("Local inference is not implemented.")
     }
 }

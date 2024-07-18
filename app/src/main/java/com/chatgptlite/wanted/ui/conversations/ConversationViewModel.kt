@@ -27,6 +27,7 @@ import com.chatgptlite.wanted.models.*
 import com.google.gson.JsonParser
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.scopes.ActivityRetainedScoped
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import okhttp3.ResponseBody
@@ -51,6 +52,15 @@ class ConversationViewModel @Inject constructor(
 ) : ViewModel() {
     val _currentConversation: MutableStateFlow<String> =
         MutableStateFlow(Date().time.toString())
+
+    private val instanceId = UUID.randomUUID().toString()
+
+    init {
+        Log.d("ConversationViewModel", "Created new instance with ID: $instanceId")
+    }
+
+    fun getInstanceId(): String = instanceId
+
     private val _conversations: MutableStateFlow<MutableList<ConversationModel>> = MutableStateFlow(
         mutableListOf()
     )
@@ -66,12 +76,20 @@ class ConversationViewModel @Inject constructor(
     public val _isLoading = MutableStateFlow(false)
     public val isLoading: StateFlow<Boolean> get() = _isLoading
     val isFetching: StateFlow<Boolean> = _isFetching.asStateFlow()
+
+
     private val _isShowAgent = MutableStateFlow(false)
     val isShowAgent: StateFlow<Boolean> get() = _isShowAgent
+
+    private val _isInitializationFailed = MutableStateFlow(false)
+    val isInitializationFailed: StateFlow<Boolean> = _isInitializationFailed.asStateFlow()
+
+    fun setInitializationFailed(isFailed: Boolean) {
+        _isInitializationFailed.value = isFailed
+    }
     fun clearConversation() {
         _currentConversation.value = ""
     }
-
     // Function to update _isShowAgent
     fun setShowAgent(showAgent: Boolean) {
         viewModelScope.launch {
@@ -146,10 +164,7 @@ class ConversationViewModel @Inject constructor(
 
     suspend fun sendMessage(message: String, onLoadingChange: (Boolean) -> Unit = {}) {
         _isLoading.value = true
-       // SessionManager.selectedAgentId = ""
-        // Reset the flag to receive results
         stopReceivingResults = false
-        // Create conversation if it doesn't exist
         if (getMessagesByConversation(_currentConversation.value).isEmpty()) {
             createConversationRemote(message)
         }
@@ -166,15 +181,12 @@ class ConversationViewModel @Inject constructor(
             conversationId = _currentConversation.value,
         )
 
-        // Add the new message to the list
         val currentListMessage = getMessagesByConversation(_currentConversation.value).toMutableList()
-        print(currentListMessage)
         currentListMessage.add(0, newMessageModel)
         setMessages(currentListMessage)
 
-        val reqAgentId : String = SessionManager.agents.entries.find { it.value.name == SessionManager.selectedAgentId }?.key?:""
-        print(reqAgentId)
-        // Use coroutine to handle the network request asynchronously
+        val reqAgentId: String = SessionManager.agents.entries.find { it.value.name == SessionManager.selectedAgentId }?.key ?: ""
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val response = RetrofitInstance.apiService.sendMessage(
@@ -183,68 +195,73 @@ class ConversationViewModel @Inject constructor(
                         agentId = reqAgentId,
                         data = Data(
                             query = message,
-                            uniqueId =  _currentConversation.value,
+                            uniqueId = _currentConversation.value,
                         )
                     )
                 ).execute()
 
                 withContext(Dispatchers.Main) {
-                    onLoadingChange(false) // Hide loading indicator
+                    onLoadingChange(false)
 
                     if (response.isSuccessful) {
                         _isLoading.value = false
                         val responseBody = response.body()?.string()?.trim()
                         responseBody?.let { responseBodyStr ->
-                            // Parse the JSON response
                             val jsonElement = JsonParser.parseString(responseBodyStr)
                             if (jsonElement.isJsonObject) {
                                 val jsonObject = jsonElement.asJsonObject
                                 val result = jsonObject.getAsJsonPrimitive("result")?.asString
-                                result?.let { answerFromGPT ->
-                                    updateLocalAnswer(answerFromGPT)
+                                if (result == null) {
+                                    messageRepo.createMessage(newMessageModel.copy(answer = "input details missing"))
+                                    updateLocalAnswer("input details missing")
+                                } else {
+                                    updateLocalAnswer(result)
                                     setFabExpanded(true)
-                                    // Set loading to false after receiving response
-                                    // Save the message to Firestore
-                                    messageRepo.createMessage(newMessageModel.copy(answer = answerFromGPT))
+                                    messageRepo.createMessage(newMessageModel.copy(answer = result))
                                 }
+                            } else {
+                                messageRepo.createMessage(newMessageModel.copy(answer = "input details missing"))
+                                updateLocalAnswer("input details missing")
                             }
+                        } ?: run {
+                            messageRepo.createMessage(newMessageModel.copy(answer = "input details missing"))
+                            updateLocalAnswer("input details missing")
                         }
                     } else {
-                        // Handle unsuccessful response
                         val errorBody = response.errorBody()?.string()
                         println("Response was not successful. Error body: $errorBody")
                         _isLoading.value = false
                         val errorMessage = errorBody ?: "Unknown error"
-                        messageRepo.createMessage(newMessageModel.copy(answer = "Server error: $errorMessage"))
+                        if (response.code() == 500) {
+                            messageRepo.createMessage(newMessageModel.copy(answer = "input details missing"))
+                            updateLocalAnswer("input details missing")
+                        } else {
+                            messageRepo.createMessage(newMessageModel.copy(answer = "oops something error"))
+                            updateLocalAnswer("oops something error")
+                        }
                     }
-                    // Ensure FAB is collapsed after completion
                     setFabExpanded(false)
                 }
             } catch (e: SocketTimeoutException) {
                 withContext(Dispatchers.Main) {
-
-
                     println("Timeout occurred: ${e.message}")
                     _isLoading.value = false
                     messageRepo.createMessage(newMessageModel.copy(answer = "oops something error"))
                     updateLocalAnswer("oops something error")
-                    onLoadingChange(false) // Hide loading indicator
+                    onLoadingChange(false)
                     setFabExpanded(false)
                 }
             } catch (e: IOException) {
                 withContext(Dispatchers.Main) {
-                    onLoadingChange(false) // Hide loading indicator
-
                     println("Network error occurred: ${e.message}")
                     _isLoading.value = false
                     messageRepo.createMessage(newMessageModel.copy(answer = "oops something error"))
                     updateLocalAnswer("oops something error")
+                    onLoadingChange(false)
                     setFabExpanded(false)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                   // Hide loading indicator
-
                     println("An error occurred: ${e.message}")
                     _isLoading.value = false
                     messageRepo.createMessage(newMessageModel.copy(answer = "oops something error"))
@@ -255,6 +272,7 @@ class ConversationViewModel @Inject constructor(
             }
         }
     }
+
 
 
 
@@ -380,7 +398,6 @@ class ConversationViewModel @Inject constructor(
         Log.d(TAG, "New conversation started with ID 4: ${messages}")
         _messages.value = messagesMap
     }
-
 
     fun stopReceivingResults() {
         stopReceivingResults = true

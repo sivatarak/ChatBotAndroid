@@ -51,4 +51,13 @@
         android:layout_weight="1"
         android:padding="10dp" />
 
+    <include
+        android:id="@+id/progress_overlay"
+        layout="@layout/progress_bar"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
 </LinearLayout>

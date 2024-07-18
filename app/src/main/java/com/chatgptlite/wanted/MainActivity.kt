@@ -2,6 +2,7 @@ package com.chatgptlite.wanted
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.viewModels
@@ -40,7 +41,6 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
     private val conversationViewModel: ConversationViewModel by viewModels()
-
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
                 }
 
             }
+
         )
     }
 }
@@ -73,6 +74,8 @@ class MainActivity : ComponentActivity() {
 fun MainContent(mainViewModel: MainViewModel, conversationViewModel: ConversationViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val drawerOpen by mainViewModel.drawerShouldBeOpened.collectAsState()
+    Log.d("AgentListFragment", "Using ViewModel instance in mainActivity: ${conversationViewModel.getInstanceId()}")
+
 
     if (drawerOpen) {
         // Open drawer and reset state in VM.
