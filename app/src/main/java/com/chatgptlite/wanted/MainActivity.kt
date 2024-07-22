@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
+import com.chatgptlite.wanted.constants.Agent
+import com.chatgptlite.wanted.constants.SessionManager
 import com.chatgptlite.wanted.ui.common.AppBar
 import com.chatgptlite.wanted.ui.common.AppScaffold
 import com.chatgptlite.wanted.ui.common.LoadingAnimation
@@ -51,12 +53,17 @@ class MainActivity : ComponentActivity() {
         val agentID = extras?.getString("agentId")
         val launchNewChat = extras?.getBoolean("launchNewChat")
         val showAgentView = extras?.getBoolean("showAgent") ?: false
-        agentID?.let { conversationViewModel.updateSelectedAgentId(it)
-        conversationViewModel.clearConversation()
-        conversationViewModel.currentConversationState}
-        launchNewChat?.let { conversationViewModel.updateIsNewChat(it) }
+        agentID?.let {
+            conversationViewModel.updateSelectedAgentId(it)
+            conversationViewModel.clearConversation()
+            conversationViewModel.currentConversationState
+        }
+        launchNewChat?.let {
+            conversationViewModel.updateIsNewChat(it)
+        }
         conversationViewModel.newConversation()
         conversationViewModel.setShowAgent(showAgentView)
+
         setContentView(
             ComposeView(this).apply {
                 consumeWindowInsets = false

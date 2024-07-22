@@ -159,6 +159,7 @@ class AgentListFragment : AppCompatActivity(), AgentAdapter.AgentClickListener {
         val reqAgentId = SessionManager.agents.entries.find { it.value.name == agentId }?.key
         getQuestionCards(agentId)
         lifecycleScope.launch {
+            startNewConversation(agentId)
             // Call the singleton method
             val initResponseCode = SignInActivity.SignInUtils.initialInstances(reqAgentId ?: "")
             if (initResponseCode == 200) {
@@ -180,8 +181,6 @@ class AgentListFragment : AppCompatActivity(), AgentAdapter.AgentClickListener {
     private suspend fun startNewConversation(agentId: String) {
         Log.d(TAG, "Starting new conversation with agentId: $agentId")
         SessionManager.selectedAgentId = agentId
-        val intent = Intent(this@AgentListFragment, MainActivity::class.java)
-        intent.putExtra("setShowAgent", true)
         delay(100)
 
         // After the new conversation is started, navigate to MainActivity

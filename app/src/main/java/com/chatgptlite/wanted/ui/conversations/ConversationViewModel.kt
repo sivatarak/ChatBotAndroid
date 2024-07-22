@@ -138,16 +138,9 @@ class ConversationViewModel @Inject constructor(
         print(_conversations.value)
 
         if (_conversations.value.isNotEmpty()) {
-            _currentConversation.value = _conversations.value.first().id
+           // _currentConversation.value = _conversations.value.first().id
             fetchMessages()
         }
-//        if (isNewChat.value) {
-//            val conversationId: String = Date().time.toString()
-//            _currentConversation.value = conversationId  // Assuming _currentConversation is a MutableLiveData<String> or similar
-//            println(_currentConversation.value)
-//            println(conversationId)
-//            Log.d(TAG, "New conversation started with ID: $conversationId")
-//        }
         _isFetching.value = false
     }
 
@@ -304,10 +297,9 @@ class ConversationViewModel @Inject constructor(
 
         val messagesMap: HashMap<String, MutableList<MessageModel>> =
             _messages.value.clone() as HashMap<String, MutableList<MessageModel>>
-
-        return messagesMap[conversationId]!!
         print(messagesMap[conversationId])
         Log.d(TAG, "New conversation started with ID 2: ${messagesMap[conversationId]}")
+        return messagesMap[conversationId]!!
 
     }
 
@@ -377,16 +369,19 @@ class ConversationViewModel @Inject constructor(
 
         flow.collectLatest {
             setMessages(it.toMutableList())
+            if(_isNewChat.value){
+                newConversation()
+            }
         }
     }
 
     private fun updateLocalAnswer(answer: String) {
         val currentListMessage: MutableList<MessageModel> =
             getMessagesByConversation(_currentConversation.value).toMutableList()
-
-        currentListMessage[0] = currentListMessage[0].copy(answer = answer)
-
-        setMessages(currentListMessage)
+        if (currentListMessage.isNotEmpty() ) {
+            currentListMessage[0] = currentListMessage[0].copy(answer = answer)
+            setMessages(currentListMessage)
+        }
     }
 
     public fun setMessages(messages: MutableList<MessageModel>) {
