@@ -17,3 +17,11 @@ val BackGroundMessageHuman = Color(0xFFE2F0E9)
 val BackGroundMessageGPT = Color(0xFF22252A)
 val ColorTextHuman = Color(0xFF3D3D4E)
 val ColorTextGPT = Color(0xFFFFFFF2)
+
+val tertiaryColor = Color(0xFFF8F8FF)
+
+val GhostWhite = Color(0xFFF4F4F5)
+val darkWhite = Color(0xFFebebeb)
+val barColor = Color(0xFF09090b)
+val AgentButton = Color(0xFF141415)
+val ConversationColor = Color(0xFF111112)

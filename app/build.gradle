@@ -49,7 +49,12 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
-
+    kotlinOptions {
+        allWarningsAsErrors = false
+        freeCompilerArgs += [
+                '-opt-in=androidx.compose.material3.ExperimentalMaterial3Api'
+        ]
+    }
     buildFeatures {
         compose true
         dataBinding true
@@ -117,17 +122,20 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth-ktx'
     implementation 'com.google.firebase:firebase-firestore-ktx'
 
+
+     
     // Dependency injection
     implementation "com.google.dagger:hilt-android:2.48"
     kapt "com.google.dagger:hilt-compiler:2.48"
     implementation "androidx.hilt:hilt-navigation-compose:1.0.0"
-    implementation 'com.google.code.gson:gson:2.9.0'
-
+  //  implementation 'com.google.code.gson:gson:2.9.0'
+    implementation 'com.google.code.gson:gson:2.8.8' // Check for the latest version
     //tenserflow for implementing whisper model
     implementation 'org.tensorflow:tensorflow-lite:2.9.0'
     implementation 'org.tensorflow:tensorflow-lite-support:0.3.1'
     implementation 'org.tensorflow:tensorflow-lite-gpu:2.9.0'
 
+    implementation "androidx.compose.material3:material3:1.1.0"
 
     implementation 'androidx.activity:activity-ktx:1.4.0'
     implementation "androidx.fragment:fragment-ktx:1.3.6"

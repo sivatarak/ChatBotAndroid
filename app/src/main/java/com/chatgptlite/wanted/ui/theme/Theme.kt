@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import android.util.TypedValue
 import android.widget.LinearLayout
+import androidx.compose.ui.graphics.Color
 import com.google.android.material.textfield.TextInputEditText
 import androidx.core.view.ViewCompat
 import com.chatgptlite.wanted.R
@@ -33,15 +34,19 @@ private val DarkColorScheme = darkColorScheme(
     primary = PrimaryColor,
     secondary = Purple80,
     tertiary = PrimaryColor,
-    background = BackGroundColor,
-    surface = PrimaryColor,
+    tertiaryContainer = AgentButton,
+    background = barColor,
+    surfaceTint = ConversationColor,
+    surface = Color.White,
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryColor,
-    secondary = Purple40,
-    tertiary = PrimaryColor,
-    background = BackGroundColor,
+    secondary = BackGroundColor,
+    tertiary =  PrimaryColor,
+    surfaceTint =  GhostWhite,
+    background = Color.White,
+    tertiaryContainer = darkWhite,
     surface = BackGroundColor,
 )
 
@@ -61,12 +66,12 @@ fun ChatGPTLiteTheme(
         else -> LightColorScheme
     }
     val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            (view.context as Activity).window.statusBarColor = colorScheme.background.toArgb()
-            ViewCompat.getWindowInsetsController(view)?.isAppearanceLightStatusBars = darkTheme
-        }
-    }
+//    if (!view.isInEditMode) {
+//        SideEffect {
+//            (view.context as Activity).window.statusBarColor = colorScheme.background.toArgb()
+//            ViewCompat.getWindowInsetsController(view)?.isAppearanceLightStatusBars = darkTheme
+//        }
+//    }
 
     MaterialTheme(
         colorScheme = colorScheme,

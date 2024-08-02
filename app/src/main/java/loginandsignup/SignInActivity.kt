@@ -1,8 +1,10 @@
 package loginandsignup
 
+import android.content.ContentValues
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.ProgressBar
@@ -25,6 +27,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import android.provider.Settings
+import android.content.Context
+import com.chatgptlite.wanted.constants.LoginRequest
+import java.util.UUID
+
 
 @AndroidEntryPoint
 class SignInActivity : AppCompatActivity() {
@@ -61,60 +68,110 @@ class SignInActivity : AppCompatActivity() {
             }
         }
     }
+    fun getDeviceHash(context: Context): String {
+        return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+    }
+
+    fun generateSessionId(): String {
+        return UUID.randomUUID().toString()
+    }
 
     private suspend fun login(username: String, password: String) {
         val sharedPreferences: SharedPreferences = getSharedPreferences("user_prefs", MODE_PRIVATE)
-        val isLoggedIn = sharedPreferences.getBoolean("is_logged_in", false)
+        val isLoggedIn = sharedPreferences.getBoolean("is_logged_in", false) // Changed default to false
 
-        if (isLoggedIn) {
+        val deviceHash = getDeviceHash(this)
+        val sessionId = generateSessionId()
+
+        if (isLoggedIn) { // Changed condition to !isLoggedIn
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val loginRequest = Data1(
-                        userId = "acb76b9c-f859-449c-b3e3-136982dae973",
-                        sessionId = "acb76b9c-f859-449c-b3e3-136982dae973",
-                        hierarchyId = "xyac",
-                        role = "R1"
+                    // Login request
+                    val loginRequest = LoginRequest(
+                        username = username,
+                        password = password,
+                        deviceHash = deviceHash,
+                        sessionId = sessionId
                     )
 
-                    val response = RetrofitInstance.apiService.getAgents(loginRequest).execute()
-                    if (response.isSuccessful) {
-                        val responseBody = response.body()?.string()
-                        println("Response Body: $responseBody")
+                    val loginResponse = RetrofitInstance.apiService.login(loginRequest).execute()
+                    if (loginResponse.isSuccessful) {
+                        val loginResponseBody = loginResponse.body()
+                        print(loginResponseBody)
+                        if (loginResponseBody != null) {
+                            // Store login response in SessionManager
+                            SessionManager.setLoginResponse(loginResponseBody)
 
-                        val jsonResponse = JSONObject(responseBody)
-                        val agentIdsObject = jsonResponse.getJSONObject("agentIds")
-
-                        val agentsMap = mutableMapOf<String, Agent>()
-                        val keys = agentIdsObject.keys()
-                        while (keys.hasNext()) {
-                            val key = keys.next()
-                            val agentData = agentIdsObject.getJSONObject(key)
-                            val agent = Agent(
-                                name = agentData.optString("Name"),
-                                description = agentData.optString("Description")
+                            val roleMap = loginResponseBody.role.user
+                            val hierarchyId = roleMap.keys.firstOrNull() ?: ""  // Extract "hierarchy Id"
+                            val role = roleMap[hierarchyId] ?: ""  // Extract "Role"
+                            val userId = loginResponseBody.userId
+                            val sessionId = sessionId
+                            SessionManager.sessionId = sessionId
+                            // Get agents request
+                            val agentRequest = Data1(
+                                userId = userId,
+                                sessionId = sessionId,
+                                hierarchyId = hierarchyId ,
+                                role = role ,
+                                org = loginResponseBody.org,
+                                position = loginResponseBody.position
                             )
-                            agentsMap[key] = agent
-                        }
+                            Log.d(ContentValues.TAG, "the agentRequest${agentRequest}")
 
-                        SessionManager.agents = agentsMap
-                        val firstAgent = agentsMap.keys.first()
-                        val firstAgentName: String? = agentsMap.values.firstOrNull()?.name
-                        SessionManager.selectedAgentId = firstAgentName ?: ""
-                        val reqAgentId = SessionManager.agents.entries.find { it.value.name == firstAgentName }?.key
-                        val initResponseCode = SignInUtils.initialInstances(reqAgentId!!)
-                        if (initResponseCode == 200) {
-                            withContext(Dispatchers.Main) {
-                                handleLoginSuccess()
+                            val response = RetrofitInstance.apiService.getAgents(agentRequest).execute()
+                            if (response.isSuccessful) {
+                                val responseBody = response.body()?.string()
+                                println("Response Body: $responseBody")
+                                Log.d(ContentValues.TAG, "Response Body: $responseBody")
+                                val jsonResponse = JSONObject(responseBody)
+                                val agentIdsObject = jsonResponse.getJSONObject("agentIds")
+
+                                val agentsMap = mutableMapOf<String, Agent>()
+                                val keys = agentIdsObject.keys()
+                                while (keys.hasNext()) {
+                                    val key = keys.next()
+                                    val agentData = agentIdsObject.getJSONObject(key)
+                                    val agent = Agent(
+                                        name = agentData.optString("Name"),
+                                        description = agentData.optString("Description")
+                                    )
+                                    agentsMap[key] = agent
+                                }
+
+                                SessionManager.agents = agentsMap
+                                val firstAgentName = agentsMap.values.firstOrNull()?.name
+                                SessionManager.selectedAgentId = firstAgentName ?: ""
+                                val reqAgentId = SessionManager.agents.entries.find { it.value.name == firstAgentName }?.key
+
+                                reqAgentId?.let {
+                                    val initResponseCode = SignInUtils.initialInstances(it)
+                                    if (initResponseCode == 200) {
+                                        withContext(Dispatchers.Main) {
+                                            handleLoginSuccess()
+                                        }
+                                    } else {
+                                        println("Initialization failed with code: $initResponseCode")
+                                        withContext(Dispatchers.Main) {
+                                            handleLoginFailure()
+                                        }
+                                    }
+                                } ?: withContext(Dispatchers.Main) {
+                                    handleLoginFailure()
+                                }
+                            } else {
+                                val errorBody = response.errorBody()?.string()
+                                println("Error Response: $errorBody")
+                                withContext(Dispatchers.Main) {
+                                    handleLoginFailure()
+                                }
                             }
                         } else {
-                            println("Initialization failed with code: $initResponseCode")
                             withContext(Dispatchers.Main) {
                                 handleLoginFailure()
                             }
                         }
                     } else {
-                        val errorBody = response.errorBody()?.string()
-                        println("Error Response: $errorBody")
                         withContext(Dispatchers.Main) {
                             handleLoginFailure()
                         }
@@ -127,12 +184,14 @@ class SignInActivity : AppCompatActivity() {
                 }
             }
         } else {
-            with(sharedPreferences.edit()) {
-                putBoolean("is_logged_in", true)
-                apply()
-            }
-
+            // User is already logged in
             handleLoginSuccess()
+        }
+
+        // Set logged in status to true
+        with(sharedPreferences.edit()) {
+            putBoolean("is_logged_in", true)
+            apply()
         }
     }
 
@@ -146,14 +205,16 @@ class SignInActivity : AppCompatActivity() {
 
     private fun handleLoginFailure() {
 
-        val agents = mapOf(
-            "A1" to Agent(name = "Resume", description = "The Resume Intelligence System..."),
-            "A2" to Agent(name = "Law", description = "The Law Intelligence System...")
-        )
-        SessionManager.agents = agents
+//        val agents = mapOf(
+//            "A1" to Agent(name = "Resume", description = "The Resume Intelligence System..."),
+//            "A2" to Agent(name = "Law", description = "The Law Intelligence System...")
+//        )
+//        SessionManager.agents = agents
+//        progressOverlay.visibility = View.GONE
+//        openMainActivity()
+
+        Toast.makeText(this, "Network error occurred. Please try again.", Toast.LENGTH_SHORT).show()
         progressOverlay.visibility = View.GONE
-        openMainActivity()
-        //Toast.makeText(this, "Network error occurred. Please try again.", Toast.LENGTH_SHORT).show()
     }
 
     object SignInUtils {
@@ -163,7 +224,7 @@ class SignInActivity : AppCompatActivity() {
                     val data = Data1(
                         userId = "acb76b9c-f859-449c-b3e3-136982dae973",
                         sessionId = "acb76b9c-f859-449c-b3e3-136982dae973",
-                        hierarchyId = "",
+                        hierarchyId = "xyac",
                         role = "R1",
                         agentId = agentId
                     )

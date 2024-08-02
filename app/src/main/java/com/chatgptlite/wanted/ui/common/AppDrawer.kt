@@ -4,9 +4,11 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +33,7 @@ import androidx.compose.material.icons.outlined.AddComment
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Message
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,13 +41,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -59,15 +66,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
+import com.chatgptlite.wanted.MainViewModel
 import com.chatgptlite.wanted.constants.SessionManager
 import com.chatgptlite.wanted.constants.SessionManager.agents
 import com.chatgptlite.wanted.constants.urlToImageAppIcon
 import com.chatgptlite.wanted.models.ConversationModel
 import com.chatgptlite.wanted.ui.conversations.ConversationViewModel
 import com.codingstuff.loginandsignup.MainActivity
-import loginandsignup.SettingsFragment
 import kotlinx.coroutines.launch
-import loginandsignup.AgentListFragment
+import loginandsignup.SettingsScreen
 
 @Composable
 fun AppDrawer(
@@ -75,7 +82,10 @@ fun AppDrawer(
     onNewChatClicked: () -> Unit,
     conversationViewModel: ConversationViewModel = hiltViewModel(),
     onIconClicked: () -> Unit = {},
-    navController: NavHostController // Added NavController parameter
+    isDarkTheme: Boolean,
+    onThemeChanged: (Boolean) -> Unit,
+    navController: NavHostController, // Added NavController parameter
+    mainViewModel: MainViewModel = hiltViewModel() // Ensure MainViewModel is used here
 ) {
     val coroutineScope = rememberCoroutineScope()
     val currentConversationState = conversationViewModel.currentConversationState.collectAsState().value
@@ -93,6 +103,7 @@ fun AppDrawer(
         deleteConversation = { conversationId ->
             coroutineScope.launch {
                 conversationViewModel.deleteConversation(conversationId)
+                conversationViewModel.newConversation()
             }
         },
         onConversation = { conversationModel: ConversationModel ->
@@ -100,9 +111,13 @@ fun AppDrawer(
                 conversationViewModel.onConversation(conversationModel)
             }
         },
+        onSettingsClicked = { mainViewModel.settingsScreenOpen() },
         currentConversationState = conversationViewModel.currentConversationState.collectAsState().value,
         conversationState = conversationViewModel.conversationsState.collectAsState().value,
-        navController = navController // Pass NavController to AppDrawerIn
+        navController = navController, // Pass NavController to AppDrawerIn
+        isDarkTheme = isDarkTheme,
+        onThemeChanged = onThemeChanged,
+
     )
 }
 
@@ -114,42 +129,51 @@ private fun AppDrawerIn(
     conversationViewModel: () -> Unit,
     deleteConversation: (String) -> Unit,
     onConversation: (ConversationModel) -> Unit,
+    onSettingsClicked: () -> Unit,
     currentConversationState: String,
+    isDarkTheme: Boolean,
+    onThemeChanged: (Boolean) -> Unit,
     conversationState: MutableList<ConversationModel>,
-    navController: NavHostController? = null // Pass NavController parameter // Add NavHostController parameter
-)  {
+    navController: NavHostController? = null, // Pass NavController parameter
+    mainViewModel: MainViewModel = hiltViewModel()
+) {
     val context = LocalContext.current
-    Log.d("AppDrawerIn", "currentConversationState: $currentConversationState")
-
-    // Log the details of the conversationState list
-    Log.d("AppDrawerIn", "conversationState: ${conversationState.joinToString { it.id }}")
-
+  //  val isDarkTheme = AppCompatDelegate.getDefaultNightMode() == AppCompatDelegate.MODE_NIGHT_YES
+   // val isDarkTheme = isSystemInDarkTheme()
+    Log.d(ContentValues.TAG, "the darktheme value is ${isDarkTheme}")
+   // var showSettings by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
         Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-        DrawerHeader(clickAction = onIconClicked)
+        DrawerHeader(clickAction = onIconClicked,isDarkTheme,onThemeChanged = onThemeChanged)
 
         // Button to navigate to Agents screen
         Row(
             verticalAlignment = CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier
-                .padding(16.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Button(
                 onClick = {
                     // Launch the AgentListActivity
-                    val intent = Intent(context, AgentListFragment::class.java)
-                    context.startActivity(intent)
-                }
+                       mainViewModel.agentsScreenOpen()
+//                    val intent = Intent(context, AgentListFragment::class.java).apply {
+//                        putExtra("isDarkTheme", isDarkTheme)
+//                    }
+//                    context.startActivity(intent)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = Color.Green
+                )
             ) {
                 Text(
                     text = "Agents",
                     fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.background
+                    color = MaterialTheme.colorScheme.surface
                 )
             }
         }
@@ -170,33 +194,17 @@ private fun AppDrawerIn(
         DividerItem(modifier = Modifier.padding(horizontal = 28.dp))
         DrawerItemHeader("Settings")
         ChatItem("Settings", Icons.Filled.Settings, false) {
-            // Launch the AgentListActivity
-            val intent = Intent(context, SettingsFragment::class.java)
-            context.startActivity(intent)
+           onSettingsClicked()
         }
+
     }
 }
 
-@Composable
-fun SettingsScreen(context: Context) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Settings", fontSize = 20.sp, fontWeight = FontWeight.Bold)
 
-        Button(onClick = {
-            val intent = Intent(context, SettingsFragment::class.java)
-            context.startActivity(intent)
-        }) {
-            Text(text = "Logout")
-        }
-    }
-}
+
 
 @Composable
-private fun DrawerHeader(clickAction: () -> Unit = {}) {
+private fun DrawerHeader(clickAction: () -> Unit = {},isDarkTheme: Boolean,onThemeChanged: (Boolean) -> Unit) {
     val paddingSizeModifier = Modifier
         .padding(start = 16.dp, top = 16.dp, bottom = 16.dp)
         .size(34.dp)
@@ -209,63 +217,39 @@ private fun DrawerHeader(clickAction: () -> Unit = {}) {
         ) {
             Image(
                 painter = rememberAsyncImagePainter(urlToImageAppIcon),
-                modifier = paddingSizeModifier.then(Modifier.clip(RoundedCornerShape(6.dp))),
+                contentDescription = null,
                 contentScale = ContentScale.Crop,
-                contentDescription = null
+                modifier = paddingSizeModifier
+                    .then(
+                        Modifier
+                            .background(MaterialTheme.colorScheme.background) // Set your desired background color
+                            .clip(RoundedCornerShape(6.dp))
+                    )
             )
+
+
             Column(modifier = Modifier.padding(horizontal = 12.dp)) {
                 Text(
                     "ChatBot",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary,
+                    color = MaterialTheme.colorScheme.surface,
                 )
             }
         }
 
         IconButton(
             onClick = {
+                onThemeChanged(!isDarkTheme)
                 clickAction.invoke()
             },
         ) {
             Icon(
-                Icons.Filled.WbSunny,
-                "backIcon",
+                imageVector = if (isDarkTheme) Icons.Filled.WbSunny  else Icons.Filled.DarkMode,
+                contentDescription = if (isDarkTheme) "Dark Mode" else "Light Mode",
                 modifier = Modifier.size(26.dp),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.surface,
             )
-        }
-    }
-}
-
-@Composable
-fun MainScreen() {
-    val agentIds = remember { agents }
-    val navController = rememberNavController()
-
-    // Set up navigation
-    NavHost(navController = navController, startDestination = "main_screen") {
-        composable("main_screen") {
-            AppDrawer(
-                onChatClicked = { /* handle chat click */ },
-                onNewChatClicked = { /* handle new chat click */ },
-                conversationViewModel = hiltViewModel(),
-                onIconClicked = { /* handle icon click */ },
-                navController = navController // Pass NavController to AppDrawer
-            )
-        }
-        composable("agents_screen") {
-            if (SessionManager.agents.isNotEmpty()) {
-                val agentIds = SessionManager.agents.mapValues { it.value.name }
-                AgentsScreen(agentIds = agentIds) {
-                    navController.popBackStack()
-                }
-            }
-
-        }
-
-        composable("login_screen") {
-            LoginScreen()
         }
     }
 }
@@ -375,7 +359,7 @@ private fun ChatItem(
     onChatClicked: () -> Unit
 ) {
     val background = if (selected) {
-        Modifier.background(MaterialTheme.colorScheme.primaryContainer)
+        Modifier.background(MaterialTheme.colorScheme.tertiaryContainer)
     } else {
         Modifier
     }
@@ -390,7 +374,7 @@ private fun ChatItem(
         verticalAlignment = CenterVertically
     ) {
         val iconTint = if (selected) {
-            MaterialTheme.colorScheme.primary
+            MaterialTheme.colorScheme.surface
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         }
@@ -406,7 +390,7 @@ private fun ChatItem(
             text,
             style = MaterialTheme.typography.bodyMedium,
             color = if (selected) {
-                MaterialTheme.colorScheme.primary
+                MaterialTheme.colorScheme.tertiaryContainer
             } else {
                 MaterialTheme.colorScheme.onSurface
             },
@@ -427,7 +411,7 @@ private fun RecycleChatItem(
     onDeleteClicked: () -> Unit
 ) {
     val background = if (selected) {
-        Modifier.background(MaterialTheme.colorScheme.primaryContainer)
+        Modifier.background(MaterialTheme.colorScheme.surfaceTint)
     } else {
         Modifier
     }
@@ -442,7 +426,7 @@ private fun RecycleChatItem(
         verticalAlignment = CenterVertically
     ) {
         val iconTint = if (selected) {
-            MaterialTheme.colorScheme.primary
+            MaterialTheme.colorScheme.surface
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         }
@@ -458,7 +442,7 @@ private fun RecycleChatItem(
             text,
             style = MaterialTheme.typography.bodyMedium,
             color = if (selected) {
-                MaterialTheme.colorScheme.primary
+                MaterialTheme.colorScheme.surface
             } else {
                 MaterialTheme.colorScheme.onSurface
             },
@@ -473,7 +457,7 @@ private fun RecycleChatItem(
             imageVector = Icons.Outlined.Delete,
             contentDescription = "Delete",
             tint = if (selected) {
-                MaterialTheme.colorScheme.primary
+                MaterialTheme.colorScheme.surface
             } else {
                 MaterialTheme.colorScheme.onSurface
             },
@@ -498,6 +482,7 @@ fun DividerItem(modifier: Modifier = Modifier) {
 @Composable
 fun PreviewAppDrawerIn() {
     val navController = rememberNavController() // Add NavController to Preview
+    var isDarkTheme by remember { mutableStateOf(false) }
     AppDrawerIn(
         onChatClicked = {},
         onNewChatClicked = {},
@@ -507,6 +492,12 @@ fun PreviewAppDrawerIn() {
         conversationState = mutableListOf(),
         currentConversationState = String(),
         onConversation = { _: ConversationModel -> },
-        navController = navController // Pass NavController to AppDrawerIn
+        navController = navController, // Pass NavController to AppDrawerIn
+        onSettingsClicked = {},
+        isDarkTheme = isDarkTheme,
+        onThemeChanged = { newTheme ->
+            isDarkTheme = newTheme
+            // Here you would typically update the app's theme
+        }
     )
 }

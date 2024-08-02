@@ -22,14 +22,23 @@ import com.chatgptlite.wanted.ui.conversations.components.TextInput
 import com.chatgptlite.wanted.ui.conversations.ui.theme.ChatGPTLiteTheme
 import com.chatgptlite.wanted.ui.theme.BackGroundColor
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.Color
+import com.chatgptlite.wanted.ui.theme.ConversationColor
+import com.chatgptlite.wanted.ui.theme.GhostWhite
 
 @Composable
-fun Conversation() {
-    ChatGPTLiteTheme {
+fun Conversation(isDarkTheme: Boolean) {
+    ChatGPTLiteTheme(darkTheme = isDarkTheme) {
+        val color = if (isDarkTheme) {
+            ConversationColor
+        } else {
+            GhostWhite
+        }
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = BackGroundColor,
+            color = color
         ) {
             Column(
                 Modifier
@@ -42,7 +51,7 @@ fun Conversation() {
                 var selectedQuestion by rememberSaveable { mutableStateOf("") }
 
                 if (showAgent) {
-                    AgentIdView(showAgent = showAgent, viewModel = conversationViewModel)
+                    AgentIdView(showAgent = showAgent, viewModel = conversationViewModel,isDarkTheme = isDarkTheme)
                 }
 
                 MessageList(
@@ -54,6 +63,7 @@ fun Conversation() {
 
                 if (showAgent) {
                     QuestionCardsRow(
+                        isDarkTheme = isDarkTheme,
                         viewModel = conversationViewModel,
                         showAgent = true, // Set to true to show the question cards
                         onQuestionSelected = { question ->
@@ -67,7 +77,8 @@ fun Conversation() {
 
                 TextInput(
                     selectedQuestion = selectedQuestion,
-                    conversationViewModel = conversationViewModel
+                    conversationViewModel = conversationViewModel,
+                    isDarkTheme = isDarkTheme
                 )
             }
         }

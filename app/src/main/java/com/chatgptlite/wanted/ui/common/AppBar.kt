@@ -21,14 +21,22 @@ import coil.compose.rememberAsyncImagePainter
 import com.chatgptlite.wanted.constants.urlToAvatarGPT
 import com.chatgptlite.wanted.ui.conversations.ui.theme.ChatGPTLiteTheme
 import com.chatgptlite.wanted.ui.theme.BackGroundColor
+import com.chatgptlite.wanted.ui.theme.barColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppBar(onClickMenu: () -> Unit) {
-    ChatGPTLiteTheme() {
+fun AppBar(onClickMenu: () -> Unit,isDarkTheme: Boolean) {
+    ChatGPTLiteTheme(darkTheme = isDarkTheme) {
+        val color = if (isDarkTheme){
+            barColor
+        }else{
+            Color.White
+        }
+
         Surface(
             shadowElevation = 4.dp,
             tonalElevation = 0.dp,
+            color = Color.White
         ) {
             CenterAlignedTopAppBar(
                 title = {
@@ -64,13 +72,13 @@ fun AppBar(onClickMenu: () -> Unit) {
                             Icons.Filled.Menu,
                             "backIcon",
                             modifier = Modifier.size(26.dp),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
                 colors = TopAppBarDefaults.smallTopAppBarColors(
-                    containerColor = BackGroundColor,
-                    titleContentColor = Color.White,
+                    containerColor = color,
+                    titleContentColor = MaterialTheme.colorScheme.background,
                 ),
             )
         }
@@ -81,6 +89,7 @@ fun AppBar(onClickMenu: () -> Unit) {
 @Composable
 fun AppBarPreview() {
     AppBar(
-        onClickMenu = {  }
+        onClickMenu = {  },
+        isDarkTheme = false
     )
 }

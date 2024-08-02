@@ -23,11 +23,13 @@ import kotlinx.coroutines.delay
 fun LoadingAnimation(
     modifier: Modifier = Modifier,
     circleSize: Dp = 10.dp,
-    circleColor: Color = ColorTextGPT,
     spaceBetween: Dp = 590.dp,
     travelDistance: Dp = 20.dp,
-    offsetX: Dp = 20.dp // New parameter for horizontal offset
+    offsetX: Dp = 20.dp,
+    isDarkTheme: Boolean
 ) {
+    val circleColor = if (isDarkTheme) ColorTextGPT else BackGroundMessageHuman
+
     val circles = listOf(
         remember { Animatable(initialValue = 0f) },
         remember { Animatable(initialValue = 0f) },
@@ -59,7 +61,7 @@ fun LoadingAnimation(
     Box(
         modifier = modifier
             .padding(top = spaceBetween)
-            .offset(x = offsetX) // Apply horizontal offset
+            .offset(x = offsetX)
     ) {
         Row {
             circleValues.forEach { value ->

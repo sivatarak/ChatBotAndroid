@@ -1,208 +1,210 @@
 package loginandsignup
 
-import android.content.ContentValues.TAG
+import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
-import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
-import android.view.View
-import android.widget.EditText
-import android.widget.ImageView
 import android.widget.Toast
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SearchView
-import androidx.appcompat.widget.Toolbar
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStoreOwner
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.draw.clip
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.chatgptlite.wanted.MainActivity
-import com.chatgptlite.wanted.R
 import com.chatgptlite.wanted.constants.Agent
-import com.chatgptlite.wanted.constants.Data1
 import com.chatgptlite.wanted.constants.QuestionReqData
 import com.chatgptlite.wanted.constants.RetrofitInstance
 import com.chatgptlite.wanted.constants.SessionManager
 import com.chatgptlite.wanted.ui.conversations.ConversationViewModel
-import com.chatgptlite.wanted.ui.conversations.ConversationViewModel_Factory
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.json.JSONObject
-import java.util.Locale
 
-@AndroidEntryPoint
-class AgentListFragment : AppCompatActivity(), AgentAdapter.AgentClickListener {
+@Composable
+fun AgentListScreen(viewModel: ConversationViewModel = viewModel(), isDarkTheme: Boolean, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
+    val allAgents = remember { SessionManager.agents.values.toList() }
+    var filteredAgents by remember { mutableStateOf(allAgents) }
 
-    private lateinit var agentAdapter: AgentAdapter
-    private lateinit var allAgents: List<Agent>  // Updated to use List<Agent>
-  //  private val viewModel: ConversationViewModel.
-
-    private val viewModel: ConversationViewModel by viewModels()
-
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.fragment_agent_list)
-        setupToolbar()
-        setupRecyclerView()
-        setupSearchView()
-        Log.d("AgentListFragment", "Using ViewModel instance: ${viewModel.getInstanceId()}")
+    LaunchedEffect(searchQuery.text) {
+        filteredAgents = if (searchQuery.text.isEmpty()) {
+            allAgents
+        } else {
+            allAgents.filter { it.name.contains(searchQuery.text, ignoreCase = true) }
+        }
     }
 
-    private fun setupToolbar() {
-        val toolbar = findViewById<Toolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = ""
-        toolbar.setNavigationOnClickListener { finish() }
+    Scaffold { padding ->
+        Column(modifier = Modifier.padding(padding).padding(top = 16.dp)) {
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                onDismiss = onDismiss
+            )
+            Spacer(modifier = Modifier.height(30.dp))
+            AgentList(filteredAgents, viewModel, isDarkTheme)
+        }
     }
+}
 
-    private fun setupRecyclerView() {
-        // Convert SessionManager.agents Map to a List<Agent>
-        allAgents = SessionManager.agents.values.toList()
-        val recyclerView = findViewById<RecyclerView>(R.id.recyclerViewAgents)
-        recyclerView.layoutManager = LinearLayoutManager(this)
-        agentAdapter = AgentAdapter(allAgents, this)
-        recyclerView.adapter = agentAdapter
-    }
-
-    private fun setupSearchView() {
-        val searchView = findViewById<SearchView>(R.id.searchView)
-        searchView.isIconified = false
-        searchView.clearFocus()
-
-        val searchText = searchView.findViewById<EditText>(androidx.appcompat.R.id.search_src_text)
-        searchText.setTextColor(Color.WHITE)
-        searchText.setHintTextColor(Color.GRAY)
-        searchText.hint = "Search Agents"
-
-        val searchIcon = searchView.findViewById<ImageView>(androidx.appcompat.R.id.search_mag_icon)
-        searchIcon.setImageDrawable(ColorDrawable(Color.TRANSPARENT))
-
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                return false
+@Composable
+fun SearchBar(query: TextFieldValue, onQueryChange: (TextFieldValue) -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .background(MaterialTheme.colorScheme.surface)
+            .height(53.dp)
+            .clip(MaterialTheme.shapes.extraLarge)
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.extraLarge)
+                .background(MaterialTheme.colorScheme.surface)
+        ) {
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.background
+                )
             }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                val filteredList = filterAgents(newText)
-                agentAdapter.updateList(filteredList)
-                return true
-            }
-        })
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        TextField(
+            value = query,
+            onValueChange = onQueryChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Search Agents") },
+            colors = TextFieldDefaults.textFieldColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            )
+        )
     }
+}
 
-    fun getQuestionCards(agentId: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                // Find the agentId using the agentName
-                val reqAgentId = SessionManager.agents.entries.find { it.value.name == agentId }?.key
 
-                // Check if agentId is found
-                if (reqAgentId != null) {
-                    println("Requesting question cards for agentId: $reqAgentId")
-
-                    // Create a QuestionReqData instance with the provided data
-                    val data = QuestionReqData(
-                        sessionId = "acb76b9c-f859-449c-b3e3-136982dae973",
-                        agentId = reqAgentId
-                    )
-
-                    // Call the API service with the loginRequest
-                    val response = RetrofitInstance.apiService.getQuestionCards(data).execute()
-                    if (response.isSuccessful) {
-                        val responseBody = response.body()?.string()
-                        println("Response Body: $responseBody")
-
-                        // Parse the JSON response
-                        val jsonResponse = JSONObject(responseBody)
-
-                        // Extract the array of questions from the JSON response
-                        val questionsJsonArray = jsonResponse.getJSONArray("questions")
-
-                        // Convert the JSON array to a list of strings
-                        val questions = mutableListOf<String>()
-                        for (i in 0 until questionsJsonArray.length()) {
-                            questions.add(questionsJsonArray.getString(i))
-                        }
-
-                        // Print the questions
-                        println("Question cards are: $questions")
-
-                        // Update SessionManager's questions
-                        SessionManager.questions = questions
-                    } else {
-                        // Handle unsuccessful response
-                        val errorBody = response.errorBody()?.string()
-                        println("Response was not successful. Error body: $errorBody")
-                    }
-                } else {
-                    println("Agent not found with name: $agentId")
+@Composable
+fun AgentList(agents: List<Agent>, viewModel: ConversationViewModel , isDarkTheme: Boolean) {
+    val context = LocalContext.current
+    LazyColumn {
+        items(agents) { agent ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                //elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                AgentItem(agent) {
+                    onClickAgent(agent.name, viewModel, context ,isDarkTheme)
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                println("An error occurred: ${e.message}")
             }
         }
     }
+}
 
+@Composable
+fun AgentItem(agent: Agent, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = ButtonDefaults.textButtonColors(
+            containerColor = MaterialTheme.colorScheme.surface, // Set the background color for the button
+            contentColor = MaterialTheme.colorScheme.background  // Set the content color (text color) for the button
+        )
+    ) {
+        Text(agent.name)
+    }
+}
 
-    override fun onClickAgent(agentId: String) {
-        val reqAgentId = SessionManager.agents.entries.find { it.value.name == agentId }?.key
-        getQuestionCards(agentId)
-        lifecycleScope.launch {
-            startNewConversation(agentId)
-            // Call the singleton method
-            val initResponseCode = SignInActivity.SignInUtils.initialInstances(reqAgentId ?: "")
-            if (initResponseCode == 200) {
-                startNewConversation(agentId)
+private fun onClickAgent(agentId: String, viewModel: ConversationViewModel, context: Context,isDarkTheme: Boolean) {
+    val reqAgentId = SessionManager.agents.entries.find { it.value.name == agentId }?.key
+    getQuestionCards(agentId)
+    (context as? ComponentActivity)?.lifecycleScope?.launch {
+        startNewConversation(agentId, viewModel, context,isDarkTheme)
+        val initResponseCode = SignInActivity.SignInUtils.initialInstances(reqAgentId ?: "")
+        if (initResponseCode == 200) {
+            startNewConversation(agentId, viewModel, context,isDarkTheme)
+        } else {
+            showInitializationFailedToast(context)
+            startNewConversation(agentId, viewModel, context,isDarkTheme)
+            viewModel.setInitializationFailed(true)
+            println("Initialization failed with code: $initResponseCode")
+        }
+    }
+}
+
+private fun getQuestionCards(agentId: String) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val reqAgentId = SessionManager.agents.entries.find { it.value.name == agentId }?.key
+            if (reqAgentId != null) {
+                println("Requesting question cards for agentId: $reqAgentId")
+                val data = QuestionReqData(
+                    sessionId = SessionManager.sessionId,
+                    agentId = reqAgentId
+                )
+                val response = RetrofitInstance.apiService.getQuestionCards(data).execute()
+                if (response.isSuccessful) {
+                    val responseBody = response.body()?.string()
+                    println("Response Body: $responseBody")
+                    val jsonResponse = JSONObject(responseBody)
+                    val questionsJsonArray = jsonResponse.getJSONArray("questions")
+                    val questions = mutableListOf<String>()
+                    for (i in 0 until questionsJsonArray.length()) {
+                        questions.add(questionsJsonArray.getString(i))
+                    }
+                    println("Question cards are: $questions")
+                    SessionManager.questions = questions
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    println("Response was not successful. Error body: $errorBody")
+                }
             } else {
-                showInitializationFailedToast()
-                startNewConversation(agentId)
-                viewModel.setInitializationFailed(true) // Correctly set the flag
-                println("Initialization failed with code: $initResponseCode")
+                println("Agent not found with name: $agentId")
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            println("An error occurred: ${e.message}")
         }
     }
-    private fun showInitializationFailedToast() {
-        val toast = Toast.makeText(this, "Initialization failed", Toast.LENGTH_SHORT)
-        toast.setGravity(Gravity.CENTER, 0, 0)
-        toast.show()
-    }
+}
 
-    private suspend fun startNewConversation(agentId: String) {
-        Log.d(TAG, "Starting new conversation with agentId: $agentId")
-        SessionManager.selectedAgentId = agentId
-        delay(100)
+private fun showInitializationFailedToast(context: Context) {
+    Toast.makeText(context, "Initialization failed", Toast.LENGTH_SHORT).show()
+}
 
-        // After the new conversation is started, navigate to MainActivity
-        openMainActivity(agentId)
-    }
+private suspend fun startNewConversation(agentId: String, viewModel: ConversationViewModel, context: Context,isDarkTheme: Boolean) {
+    Log.d("AgentListScreen", "Starting new conversation with agentId: $agentId")
+    SessionManager.selectedAgentId = agentId
+    delay(100)
+    openMainActivity(agentId, context,isDarkTheme)
+}
 
-    private fun openMainActivity(agentId: String) {
-        Log.d(TAG, "Opening MainActivity with agent ID: $agentId")
-        val intent = Intent(this@AgentListFragment, MainActivity::class.java)
-        intent.putExtra("agentId", agentId)
-        intent.putExtra("showAgent", true)
-        startActivity(intent)
-        finish()
-    }
-
-    private fun filterAgents(query: String?): List<Agent> {
-        if (query.isNullOrEmpty()) {
-            return allAgents
-        }
-        val lowerCaseQuery = query.toLowerCase(Locale.ROOT)
-        return allAgents.filter { it.name.toLowerCase(Locale.ROOT).contains(lowerCaseQuery) }
-    }
-
-
+private fun openMainActivity(agentId: String, context: Context,isDarkTheme: Boolean) {
+    Log.d("AgentListScreen", "Opening MainActivity with agent ID: $agentId")
+    val intent = Intent(context, MainActivity::class.java)
+    intent.putExtra("agentId", agentId)
+    intent.putExtra("showAgent", true)
+    intent.putExtra("isDarkTheme", isDarkTheme)
+    context.startActivity(intent)
+    (context as? ComponentActivity)?.finish()
 }

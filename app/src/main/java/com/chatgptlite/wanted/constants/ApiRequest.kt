@@ -16,7 +16,9 @@ data class Data1(
     val sessionId: String = "",
     val role: String = "",
     var hierarchyId: String="",
-    var agentId: String =""
+    var agentId: String ="",
+    val org : String = "",
+    val position : String = ""
 )
 data class QuestionReqData(
     val sessionId: String = "",
@@ -32,18 +34,36 @@ object SessionManager {
     var agents: Map<String, Agent> = mutableMapOf()
     var selectedAgentId: String = ""
     var questions: List<String> = listOf()  // Initialize as an empty list
+    var sessionId: String = ""
+    private var loginResponse: LoginResponse? = null  // Store the login response
+
+    fun setLoginResponse(response: LoginResponse) {
+        loginResponse = response
+    }
+
+    fun getLoginResponse(): LoginResponse? {
+        return loginResponse
+    }
 }
-
-
 
 data class LoginRequest(
     val username: String,
-    val password: String
+    val password: String,
+    val deviceHash: String,
+    val sessionId: String
 )
 
 data class LoginResponse(
-    val token: String,
-    val message: String
+    val userName: String,
+    val email: String,
+    val userId: String,
+    val org: String,
+    val position: String,
+    val deviceHash: String,
+    val role: Role
 )
 
+data class Role(
+    val user: Map<String, String> // Using a map to handle dynamic keys
+)
 

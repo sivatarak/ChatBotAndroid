@@ -38,11 +38,14 @@ import com.chatgptlite.wanted.ui.conversations.ConversationViewModel
 import com.chatgptlite.wanted.ui.theme.ChatGPTLiteTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import loginandsignup.AgentListScreen
+import loginandsignup.SettingsScreen
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
     private val conversationViewModel: ConversationViewModel by viewModels()
+    private var darkTheme = false
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,6 +56,7 @@ class MainActivity : ComponentActivity() {
         val agentID = extras?.getString("agentId")
         val launchNewChat = extras?.getBoolean("launchNewChat")
         val showAgentView = extras?.getBoolean("showAgent") ?: false
+        darkTheme = extras?.getBoolean("isDarkTheme") ?: false
         agentID?.let {
             conversationViewModel.updateSelectedAgentId(it)
             conversationViewModel.clearConversation()
@@ -68,26 +72,28 @@ class MainActivity : ComponentActivity() {
             ComposeView(this).apply {
                 consumeWindowInsets = false
                 setContent {
-                        MainContent(mainViewModel, conversationViewModel)
+                    MainContent(mainViewModel, conversationViewModel, darkTheme) { newTheme ->
+                        darkTheme = newTheme
+                    }
                 }
-
             }
-
         )
     }
 }
 
 @Composable
-fun MainContent(mainViewModel: MainViewModel, conversationViewModel: ConversationViewModel) {
+fun MainContent(mainViewModel: MainViewModel, conversationViewModel: ConversationViewModel, darkTheme: Boolean, onThemeChange: (Boolean) -> Unit) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val drawerOpen by mainViewModel.drawerShouldBeOpened.collectAsState()
+    val settingsOpen by mainViewModel.settingsScreenOpen.collectAsState()
+    val agentScreenOpen by mainViewModel.agentScreenOpen.collectAsState()
+    val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+
     Log.d("AgentListFragment", "Using ViewModel instance in mainActivity: ${conversationViewModel.getInstanceId()}")
 
-
     if (drawerOpen) {
-        // Open drawer and reset state in VM.
         LaunchedEffect(Unit) {
-            // wrap in try-finally to handle interruption whiles opening drawer
             try {
                 drawerState.open()
             } finally {
@@ -95,10 +101,6 @@ fun MainContent(mainViewModel: MainViewModel, conversationViewModel: Conversatio
             }
         }
     }
-
-    // Intercepts back navigation when the drawer is open
-    val scope = rememberCoroutineScope()
-    val focusManager = LocalFocusManager.current
 
     BackHandler {
         if (drawerState.isOpen) {
@@ -110,63 +112,93 @@ fun MainContent(mainViewModel: MainViewModel, conversationViewModel: Conversatio
         }
     }
 
-    val darkTheme = remember { mutableStateOf(true) }
+    val darkTheme = remember { mutableStateOf(darkTheme) }
     val isLoading by conversationViewModel.isLoading.collectAsState()
 
     ChatGPTLiteTheme(darkTheme.value) {
-        Surface(
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            AppScaffold(
-                drawerState = drawerState,
-                onChatClicked = {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            if (settingsOpen) {
+                LaunchedEffect(Unit) {
                     scope.launch {
                         drawerState.close()
+                      //  mainViewModel.closeSettingsScreen()
                     }
-                },
-                onNewChatClicked = {
-                    scope.launch {
-                        drawerState.close()
-                    }
-                },
-                onIconClicked = {
-                    darkTheme.value = !darkTheme.value
                 }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                ) {
-                    AppBar(onClickMenu = {
+                SettingsScreen(
+                    isDarkTheme = darkTheme.value,
+                    onDismiss = {
+                        mainViewModel.closeSettingsScreen()
                         scope.launch {
                             drawerState.open()
-                        }
-                    })
-                    Divider()
-                    Box(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Conversation()
-
-                        if (isLoading) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                // Optional: semi-transparent background to emphasize loading
-
-                            ) {
-                                LoadingAnimation()
-                            }
-                        }else {
-                            Conversation()
+                            //  mainViewModel.closeSettingsScreen()
                         }
                     }
+                )
+            }else if (agentScreenOpen){
+                LaunchedEffect(Unit) {
+                    scope.launch {
+                        drawerState.close()
+                        //  mainViewModel.closeSettingsScreen()
+                    }
+                }
+                AgentListScreen(
+                    isDarkTheme = darkTheme.value,
+                    onDismiss = {
+                         mainViewModel.agentsScreenClose()
+                        scope.launch {
+                            drawerState.open()
 
+                        }
+                    }
+                )
+            }
+
+            else {
+                AppScaffold(
+                    drawerState = drawerState,
+                    onChatClicked = {
+                        scope.launch {
+                            drawerState.close()
+                        }
+                    },
+                    onNewChatClicked = {
+                        scope.launch {
+                            drawerState.close()
+                        }
+                    },
+                    onIconClicked = {
+                        darkTheme.value = !darkTheme.value
+                    },
+                    onThemeChanged = { newTheme ->  // Add this line
+                        darkTheme.value = newTheme  // Add this line
+                        onThemeChange(newTheme)     // Add this line
+                    }
+                ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        AppBar(isDarkTheme = darkTheme.value, onClickMenu = {
+                            scope.launch {
+                                drawerState.open()
+                            }
+                        })
+                        Divider()
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            Conversation(isDarkTheme = darkTheme.value)
+
+                            if (isLoading) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    LoadingAnimation(isDarkTheme = darkTheme.value)
+                                }
+                            } else {
+                                Conversation(isDarkTheme = darkTheme.value)
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable

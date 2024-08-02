@@ -30,7 +30,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun TextInput(
     selectedQuestion: String,
-    conversationViewModel: ConversationViewModel = hiltViewModel()
+    conversationViewModel: ConversationViewModel = hiltViewModel(),
+    isDarkTheme: Boolean
 ) {
     val coroutineScope = rememberCoroutineScope()
     val isLoading by conversationViewModel.isLoading.collectAsState()
@@ -56,7 +57,8 @@ fun TextInput(
             }
         },
         isLoading = isLoading,
-        isInitializationFailed = isInitializationFailed // Pass the new flag
+        isInitializationFailed = isInitializationFailed, // Pass the new flag,
+        isDarkTheme = isDarkTheme
     )
 }
 
@@ -66,6 +68,7 @@ private fun TextInputIn(
     selectedQuestion: String,
     sendMessage: (String) -> Unit,
     isLoading: Boolean,
+    isDarkTheme: Boolean,
     isInitializationFailed: Boolean, // New parameter
     conversationViewModel: ConversationViewModel = hiltViewModel()
 ) {
@@ -114,7 +117,7 @@ private fun TextInputIn(
                         colors = TextFieldDefaults.outlinedTextFieldColors(
                             focusedBorderColor = Color.Transparent,
                             unfocusedBorderColor = Color.Transparent,
-                            focusedTextColor = Color.White,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         ),
                         enabled = !isLoading && !isInitializationFailed // Disable based on the flag
                     )
@@ -133,7 +136,7 @@ private fun TextInputIn(
                             Icons.Filled.Send,
                             "sendMessage",
                             modifier = Modifier.size(26.dp),
-                            tint = if (isLoading || isInitializationFailed) Color.Gray else MaterialTheme.colorScheme.primary,
+                            tint = if (isLoading || isInitializationFailed) Color.Gray else MaterialTheme.colorScheme.onSurface,
                         )
                     }
 
@@ -150,6 +153,7 @@ fun PreviewTextInput() {
         selectedQuestion = "",
         sendMessage = {},
         isLoading = false,
-        isInitializationFailed = false
+        isInitializationFailed = false,
+        isDarkTheme = true
     )
 }

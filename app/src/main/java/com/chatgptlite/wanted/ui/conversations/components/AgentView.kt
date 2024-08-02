@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-fun AgentIdView(viewModel: ConversationViewModel,  showAgent: Boolean) {
+fun AgentIdView(viewModel: ConversationViewModel,  showAgent: Boolean ,isDarkTheme :Boolean) {
     val context = LocalContext.current as? Activity
 
     val agentId = SessionManager.selectedAgentId
@@ -31,6 +31,11 @@ fun AgentIdView(viewModel: ConversationViewModel,  showAgent: Boolean) {
         ?.description ?: ""
 
     val currentConversationId by viewModel.currentConversationState.collectAsState()
+    val agentColor = if (isDarkTheme){
+       Color.White
+    }else{
+       Color.Black
+    }
     // Only render the content if agentId is not empty and currentConversationId is empty
         Column(
             modifier = Modifier
@@ -43,7 +48,7 @@ fun AgentIdView(viewModel: ConversationViewModel,  showAgent: Boolean) {
             Text(
                 text = agentId,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = agentColor
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(

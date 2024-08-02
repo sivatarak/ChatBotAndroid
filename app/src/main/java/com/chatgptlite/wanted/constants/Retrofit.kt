@@ -8,13 +8,13 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitInstance {
     private val client = OkHttpClient.Builder()
-        .connectTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(100, TimeUnit.SECONDS)
+        .readTimeout(100, TimeUnit.SECONDS)
         .build()
 
     private val retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl("http://172.25.1.160:5001/")
+            .baseUrl("http://172.25.1.195:5001/")
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

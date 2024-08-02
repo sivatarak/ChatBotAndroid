@@ -3,6 +3,7 @@ package com.chatgptlite.wanted.ui.conversations.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -39,12 +40,11 @@ fun MessageCard(message: MessageModel, isHuman: Boolean = false, isLast: Boolean
                 .widthIn(0.dp, 300.dp) // mention max width here
                 .padding(top = if (isLast) 200.dp else 0.dp)
                 .background(
-                    if (isHuman) BackGroundMessageHuman else BackGroundMessageGPT,
+                    color = if (isHuman) BackGroundMessageHuman else MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(12.dp)
                 ),
         ) {
             if (isHuman) {
-                // Move HumanMessageCard here to be closer to the top
                 HumanMessageCard(message = message)
             } else {
                 BotMessageCard(message = message)
@@ -79,11 +79,11 @@ fun BotMessageCard(message: MessageModel) {
                                 fontFamily = FontFamily.Default,
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 13.sp,
-                                color = ColorTextGPT,
+
                             ),
                             wordWrap = true,
                             modifier = Modifier.background(
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.background,
                                 shape = RoundedCornerShape(6.dp)
                             )
                         )
