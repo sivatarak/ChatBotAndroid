@@ -22,10 +22,9 @@ import kotlinx.coroutines.delay
 @Composable
 fun LoadingAnimation(
     modifier: Modifier = Modifier,
-    circleSize: Dp = 10.dp,
-    spaceBetween: Dp = 590.dp,
-    travelDistance: Dp = 20.dp,
-    offsetX: Dp = 20.dp,
+    circleSize: Dp = 8.dp,
+    spaceBetween: Dp = 4.dp,
+    travelDistance: Dp = 16.dp,
     isDarkTheme: Boolean
 ) {
     val circleColor = if (isDarkTheme) ColorTextGPT else BackGroundMessageHuman
@@ -58,24 +57,27 @@ fun LoadingAnimation(
     val circleValues = circles.map { it.value }
     val distance = with(LocalDensity.current) { travelDistance.toPx() }
 
-    Box(
-        modifier = modifier
-            .padding(top = spaceBetween)
-            .offset(x = offsetX)
-    ) {
-        Row {
-            circleValues.forEach { value ->
+    Box(modifier = modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = (-20).dp, y = (-20).dp)
+        ) {
+            circleValues.forEachIndexed { index, value ->
                 Box(
                     modifier = Modifier
                         .size(circleSize)
                         .graphicsLayer {
-                            translationX = -value * distance
+                            translationY = -value * distance
                         }
                         .background(
                             color = circleColor,
                             shape = CircleShape
                         )
                 )
+                if (index < circleValues.size - 1) {
+                    Spacer(modifier = Modifier.width(spaceBetween))
+                }
             }
         }
     }

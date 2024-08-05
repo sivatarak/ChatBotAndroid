@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import com.chatgptlite.wanted.constants.Agent
 import com.chatgptlite.wanted.constants.SessionManager
@@ -186,7 +189,10 @@ fun MainContent(mainViewModel: MainViewModel, conversationViewModel: Conversatio
 
                             if (isLoading) {
                                 Box(modifier = Modifier.fillMaxSize()) {
-                                    LoadingAnimation(isDarkTheme = darkTheme.value)
+                                    LoadingAnimation(
+                                        modifier = Modifier.padding(70.dp),
+                                        isDarkTheme = darkTheme.value
+                                    )
                                 }
                             } else {
                                 Conversation(isDarkTheme = darkTheme.value)

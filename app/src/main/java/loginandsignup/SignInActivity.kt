@@ -205,16 +205,16 @@ class SignInActivity : AppCompatActivity() {
 
     private fun handleLoginFailure() {
 
-//        val agents = mapOf(
-//            "A1" to Agent(name = "Resume", description = "The Resume Intelligence System..."),
-//            "A2" to Agent(name = "Law", description = "The Law Intelligence System...")
-//        )
-//        SessionManager.agents = agents
-//        progressOverlay.visibility = View.GONE
-//        openMainActivity()
-
-        Toast.makeText(this, "Network error occurred. Please try again.", Toast.LENGTH_SHORT).show()
+        val agents = mapOf(
+            "A1" to Agent(name = "Resume", description = "The Resume Intelligence System..."),
+            "A2" to Agent(name = "Law", description = "The Law Intelligence System...")
+        )
+        SessionManager.agents = agents
         progressOverlay.visibility = View.GONE
+        openMainActivity()
+
+//        Toast.makeText(this, "Network error occurred. Please try again.", Toast.LENGTH_SHORT).show()
+//        progressOverlay.visibility = View.GONE
     }
 
     object SignInUtils {
