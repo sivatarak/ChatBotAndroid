@@ -29,7 +29,10 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import android.provider.Settings
 import android.content.Context
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import com.chatgptlite.wanted.constants.LoginRequest
+import com.chatgptlite.wanted.constants.LoginResponse
 import java.util.UUID
 
 
@@ -76,10 +79,28 @@ class SignInActivity : AppCompatActivity() {
         return UUID.randomUUID().toString()
     }
 
+    private fun setEditTextsEnabled(enabled: Boolean) {
+        emailEditText.isEnabled = enabled
+        passwordEditText.isEnabled = enabled
+    }
+
+    private fun showProgressOverlay() {
+        progressOverlay.visibility = View.VISIBLE
+        setEditTextsEnabled(false)
+    }
+
+    private fun hideProgressOverlay() {
+        progressOverlay.visibility = View.GONE
+        setEditTextsEnabled(true)
+    }
+
+    private val json = Json {
+        ignoreUnknownKeys = true // This will ignore unknown keys during deserialization
+    }
     private suspend fun login(username: String, password: String) {
         val sharedPreferences: SharedPreferences = getSharedPreferences("user_prefs", MODE_PRIVATE)
         val isLoggedIn = sharedPreferences.getBoolean("is_logged_in", false) // Changed default to false
-
+        showProgressOverlay()
         val deviceHash = getDeviceHash(this)
         val sessionId = generateSessionId()
 
@@ -96,7 +117,21 @@ class SignInActivity : AppCompatActivity() {
 
                     val loginResponse = RetrofitInstance.apiService.login(loginRequest).execute()
                     if (loginResponse.isSuccessful) {
-                        val loginResponseBody = loginResponse.body()
+                        val responseBody = loginResponse.body()?.string()
+                        val jsonObject = JsonParser.parseString(responseBody).asJsonObject
+                        val statusCode = jsonObject.get("status_code")?.asInt
+
+                        if (statusCode == 404) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(this@SignInActivity, "Invalid credentials", Toast.LENGTH_SHORT).show()
+                                progressOverlay.visibility = View.GONE
+                            }
+                            return@launch
+                        }
+
+
+                        val loginResponseBody: LoginResponse = json.decodeFromString(responseBody ?: "")
+
                         print(loginResponseBody)
                         if (loginResponseBody != null) {
                             // Store login response in SessionManager
@@ -117,7 +152,7 @@ class SignInActivity : AppCompatActivity() {
                                 org = loginResponseBody.org,
                                 position = loginResponseBody.position
                             )
-                            Log.d(ContentValues.TAG, "the agentRequest${agentRequest}")
+                            Log.d(ContentValues.TAG, "the agentRequest${agentRequest},${sessionId}")
 
                             val response = RetrofitInstance.apiService.getAgents(agentRequest).execute()
                             if (response.isSuccessful) {
@@ -179,7 +214,15 @@ class SignInActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     println("Exception: ${e.message}")
                     withContext(Dispatchers.Main) {
-                        handleLoginFailure()
+                        //handleLoginFailure()
+                        Toast.makeText(this@SignInActivity, "Network error occurred, Try again", Toast.LENGTH_SHORT).show()
+                        progressOverlay.visibility = View.GONE
+                    }
+                }finally {
+                    // Hide progress overlay
+                    withContext(Dispatchers.Main) {
+                        hideProgressOverlay()
+                       // progressOverlay.visibility = View.GONE
                     }
                 }
             }
@@ -205,16 +248,16 @@ class SignInActivity : AppCompatActivity() {
 
     private fun handleLoginFailure() {
 
-        val agents = mapOf(
-            "A1" to Agent(name = "Resume", description = "The Resume Intelligence System..."),
-            "A2" to Agent(name = "Law", description = "The Law Intelligence System...")
-        )
-        SessionManager.agents = agents
-        progressOverlay.visibility = View.GONE
-        openMainActivity()
-
-//        Toast.makeText(this, "Network error occurred. Please try again.", Toast.LENGTH_SHORT).show()
+//        val agents = mapOf(
+//            "A1" to Agent(name = "Resume", description = "The Resume Intelligence System..."),
+//            "A2" to Agent(name = "Law", description = "The Law Intelligence System...")
+//        )
+//        SessionManager.agents = agents
 //        progressOverlay.visibility = View.GONE
+//        openMainActivity()
+
+        Toast.makeText(this, "Invalid input arguments", Toast.LENGTH_SHORT).show()
+        progressOverlay.visibility = View.GONE
     }
 
     object SignInUtils {

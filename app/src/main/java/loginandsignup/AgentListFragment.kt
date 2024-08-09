@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.lifecycle.lifecycleScope
 import com.chatgptlite.wanted.MainActivity
@@ -61,39 +62,38 @@ fun AgentListScreen(viewModel: ConversationViewModel = viewModel(), isDarkTheme:
 
 @Composable
 fun SearchBar(query: TextFieldValue, onQueryChange: (TextFieldValue) -> Unit, onDismiss: () -> Unit) {
-    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .background(MaterialTheme.colorScheme.surface)
-            .height(53.dp)
-            .clip(MaterialTheme.shapes.extraLarge)
+            .background(
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                shape = MaterialTheme.shapes.extraLarge
+            )
+            .height(53.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .clip(MaterialTheme.shapes.extraLarge)
-                .background(MaterialTheme.colorScheme.surface)
-        ) {
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.background
-                )
-            }
+        IconButton(onClick = onDismiss) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                tint = MaterialTheme.colorScheme.onTertiaryContainer
+            )
         }
-        Spacer(modifier = Modifier.width(8.dp))
+
         TextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
             placeholder = { Text("Search Agents") },
             colors = TextFieldDefaults.textFieldColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
-            )
+            ),
+            singleLine = true
         )
     }
 }
@@ -108,7 +108,7 @@ fun AgentList(agents: List<Agent>, viewModel: ConversationViewModel , isDarkThem
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
                 //elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 AgentItem(agent) {
@@ -127,8 +127,8 @@ fun AgentItem(agent: Agent, onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(16.dp),
         colors = ButtonDefaults.textButtonColors(
-            containerColor = MaterialTheme.colorScheme.surface, // Set the background color for the button
-            contentColor = MaterialTheme.colorScheme.background  // Set the content color (text color) for the button
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer, // Set the background color for the button
+            contentColor = MaterialTheme.colorScheme.surface  // Set the content color (text color) for the button
         )
     ) {
         Text(agent.name)

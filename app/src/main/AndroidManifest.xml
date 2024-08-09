@@ -29,9 +29,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="loginandsignup.AgentListFragment" />
-
-        <activity android:name="loginandsignup.SettingsFragment" />
 
         <!-- MainActivity is declared but not as the launcher activity -->
         <activity

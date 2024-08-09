@@ -18,7 +18,7 @@ interface ApiService {
     fun sendMessage(@Body requestBody: ApiRequest): Call<ResponseBody>
 
     @POST("api/login")
-    fun login(@Body request: LoginRequest): Call<LoginResponse>
+    fun login(@Body request: LoginRequest): Call<ResponseBody>
 
     @POST("chatbot/getAgentIds")
     fun getAgents(@Body request: Data1): Call<ResponseBody>

@@ -4,6 +4,39 @@
 #
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
+# Please add these rules to your existing keep rules in order to suppress warnings.
+# This is generated automatically by the Android Gradle plugin.
+-dontwarn java.sql.JDBCType
+-dontwarn javax.lang.model.SourceVersion
+-dontwarn javax.lang.model.element.Element
+-dontwarn javax.lang.model.element.ElementKind
+-dontwarn javax.lang.model.element.ElementVisitor
+-dontwarn javax.lang.model.element.ExecutableElement
+-dontwarn javax.lang.model.element.Name
+-dontwarn javax.lang.model.element.PackageElement
+-dontwarn javax.lang.model.element.TypeElement
+-dontwarn javax.lang.model.element.TypeParameterElement
+-dontwarn javax.lang.model.element.VariableElement
+-dontwarn javax.lang.model.type.ArrayType
+-dontwarn javax.lang.model.type.DeclaredType
+-dontwarn javax.lang.model.type.ExecutableType
+-dontwarn javax.lang.model.type.TypeKind
+-dontwarn javax.lang.model.type.TypeMirror
+-dontwarn javax.lang.model.type.TypeVariable
+-dontwarn javax.lang.model.type.TypeVisitor
+-dontwarn javax.lang.model.util.ElementFilter
+-dontwarn javax.lang.model.util.SimpleElementVisitor8
+-dontwarn javax.lang.model.util.SimpleTypeVisitor8
+-dontwarn javax.lang.model.util.Types
+-dontwarn org.bouncycastle.jsse.BCSSLParameters
+-dontwarn org.bouncycastle.jsse.BCSSLSocket
+-dontwarn org.bouncycastle.jsse.provider.BouncyCastleJsseProvider
+-dontwarn org.conscrypt.Conscrypt$Version
+-dontwarn org.conscrypt.Conscrypt
+-dontwarn org.conscrypt.ConscryptHostnameVerifier
+-dontwarn org.openjsse.javax.net.ssl.SSLParameters
+-dontwarn org.openjsse.javax.net.ssl.SSLSocket
+-dontwarn org.openjsse.net.ssl.OpenJSSE
 
 # If your project uses WebView with JS, uncomment the following
 # and specify the fully qualified class name to the JavaScript interface

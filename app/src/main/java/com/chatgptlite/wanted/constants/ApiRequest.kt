@@ -1,5 +1,7 @@
 package com.chatgptlite.wanted.constants
 
+import kotlinx.serialization.Serializable
+
 data class ApiRequest(
     val sessionId: String,
     val agentId: String,
@@ -53,6 +55,7 @@ data class LoginRequest(
     val sessionId: String
 )
 
+@Serializable
 data class LoginResponse(
     val userName: String,
     val email: String,
@@ -60,10 +63,16 @@ data class LoginResponse(
     val org: String,
     val position: String,
     val deviceHash: String,
-    val role: Role
+    val role: Role,
+    val someOptionalField: String? = null
 )
 
+@Serializable
 data class Role(
     val user: Map<String, String> // Using a map to handle dynamic keys
 )
+
+object Config {
+    const val API_BASE_URL = "http://172.25.1.195:5001/"
+}
 
