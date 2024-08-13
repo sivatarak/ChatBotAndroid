@@ -140,6 +140,7 @@ private fun onClickAgent(agentId: String, viewModel: ConversationViewModel, cont
     getQuestionCards(agentId)
     (context as? ComponentActivity)?.lifecycleScope?.launch {
         startNewConversation(agentId, viewModel, context,isDarkTheme)
+
         val initResponseCode = SignInActivity.SignInUtils.initialInstances(reqAgentId ?: "")
         if (initResponseCode == 200) {
             startNewConversation(agentId, viewModel, context,isDarkTheme)
@@ -152,7 +153,7 @@ private fun onClickAgent(agentId: String, viewModel: ConversationViewModel, cont
     }
 }
 
-private fun getQuestionCards(agentId: String) {
+ fun getQuestionCards(agentId: String) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val reqAgentId = SessionManager.agents.entries.find { it.value.name == agentId }?.key

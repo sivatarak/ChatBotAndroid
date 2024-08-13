@@ -3,4 +3,5 @@
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">172.25.1.195</domain>
     </domain-config>
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

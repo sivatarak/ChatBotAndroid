@@ -29,10 +29,17 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import android.provider.Settings
 import android.content.Context
+import android.view.contentcapture.ContentCaptureSessionId
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import com.chatgptlite.wanted.constants.LoginRequest
 import com.chatgptlite.wanted.constants.LoginResponse
+import com.chatgptlite.wanted.constants.SessionManager.sessionId
+import com.chatgptlite.wanted.ui.common.AgentsScreen
+import org.checkerframework.framework.qual.DefaultQualifierInHierarchy
 import java.util.UUID
 
 
@@ -44,7 +51,12 @@ class SignInActivity : AppCompatActivity() {
     private lateinit var progressOverlay: View
 
     private val viewModel: ConversationViewModel by viewModels()
-
+//    @Composable
+//    fun MyComposableFunction(viewModel: ConversationViewModel) {
+//        val showAgent by viewModel.isShowAgent.collectAsState()
+//
+//        // Use showAgent here
+//    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sign_in)
@@ -264,13 +276,28 @@ class SignInActivity : AppCompatActivity() {
         suspend fun initialInstances(agentId: String): Int {
             return withContext(Dispatchers.IO) {
                 try {
+                    val loginResponse = SessionManager.getLoginResponse()
+                    //val sessionId = SessionManager.getSessionId()
+
+                    if (loginResponse == null || sessionId == null) {
+                        println("Login response or session ID is missing.")
+                        return@withContext 500
+                    }
+
+                    val roleMap = loginResponse.role.user
+                    val hierarchyId = roleMap.keys.firstOrNull() ?: ""  // Extract "hierarchy Id"
+                    val role = roleMap[hierarchyId] ?: ""  // Extract "Role"
+
                     val data = Data1(
-                        userId = "acb76b9c-f859-449c-b3e3-136982dae973",
-                        sessionId = "acb76b9c-f859-449c-b3e3-136982dae973",
-                        hierarchyId = "xyac",
-                        role = "R1",
-                        agentId = agentId
+                        userId = loginResponse.userId,
+                        sessionId = sessionId,
+                        hierarchyId = hierarchyId,
+                        role = role,
+                        agentId = agentId,
+                        org = loginResponse.org,
+                        position = loginResponse.position
                     )
+
                     val response = RetrofitInstance.apiService.initializeInstances(data).execute()
                     if (response.isSuccessful) {
                         val responseBody = response.body()?.string()
@@ -281,13 +308,14 @@ class SignInActivity : AppCompatActivity() {
                             val statusCode = jsonObject.get("status_code")?.asInt
 
                             if (statusCode == 200) {
+
                                 200
                             } else {
                                 val errorDetail = jsonObject.get("detail")?.asString
 
                                 println("Response was not successful. Error detail: $errorDetail")
                                 if (statusCode == 500) {
-                                 //   viewModel.setInitializationFailed(true)
+                                    // viewModel.setInitializationFailed(true)
                                 }
                                 statusCode ?: response.code()
                             }
@@ -307,6 +335,7 @@ class SignInActivity : AppCompatActivity() {
             }
         }
     }
+
 
 
 

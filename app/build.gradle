@@ -17,12 +17,13 @@ android {
     namespace 'com.chatgptlite.wanted'
     compileSdk 34
 
+
     defaultConfig {
 
 
         buildConfigField "String", "API_BASE_URL", "\"https://api.yourdomain.com\""
         applicationId "com.chatgptlite.wanted"
-        minSdk 24
+        minSdk 21
         targetSdk 33
         versionCode 1
         versionName "1.0"
@@ -36,6 +37,7 @@ android {
     buildTypes {
         release {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            manifestPlaceholders = [cleartextTraffic: 'true']
             debuggable false                // make app non-debuggable
             crunchPngs true                 // shrink images
             minifyEnabled true              // obfuscate code and remove unused code

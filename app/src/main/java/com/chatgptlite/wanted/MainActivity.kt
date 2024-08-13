@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
         setContentView(
             ComposeView(this).apply {
                 consumeWindowInsets = false
+                conversationViewModel.setShowAgent(true)
                 setContent {
                     MainContent(mainViewModel, conversationViewModel, darkTheme) { newTheme ->
                         darkTheme = newTheme

@@ -184,7 +184,7 @@ class ConversationViewModel @Inject constructor(
             try {
                 val response = RetrofitInstance.apiService.sendMessage(
                     ApiRequest(
-                        sessionId = "acb76b9c-f859-449c-b3e3-136982dae973",
+                        sessionId = SessionManager.sessionId,
                         agentId = reqAgentId,
                         data = Data(
                             query = message,
@@ -287,12 +287,14 @@ class ConversationViewModel @Inject constructor(
         val conversationId: String = Date().time.toString()
         _currentConversation.value = conversationId  // Assuming _currentConversation is a MutableLiveData<String> or similar
         println(_currentConversation.value)
-       println(conversationId)
+       // setShowAgent(true)
+        println(conversationId)
        Log.d(TAG, "New conversation started with ID 1: $conversationId")
 
     }
 
     fun getMessagesByConversation(conversationId: String): MutableList<MessageModel> {
+        setShowAgent(false)
         if (_messages.value[conversationId] == null) return mutableListOf()
 
         val messagesMap: HashMap<String, MutableList<MessageModel>> =

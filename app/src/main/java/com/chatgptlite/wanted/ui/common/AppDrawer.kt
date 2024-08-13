@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.AddComment
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Message
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
@@ -89,6 +90,7 @@ fun AppDrawer(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val currentConversationState = conversationViewModel.currentConversationState.collectAsState().value
+    val showAgent = conversationViewModel.isShowAgent.collectAsState()
     Log.d(ContentValues.TAG, "currentConversationStateinAppDrawer: ${currentConversationState}")
 
     AppDrawerIn(
@@ -107,7 +109,9 @@ fun AppDrawer(
             }
         },
         onConversation = { conversationModel: ConversationModel ->
+            conversationViewModel.setShowAgent(false)
             coroutineScope.launch {
+
                 conversationViewModel.onConversation(conversationModel)
             }
         },
@@ -298,6 +302,9 @@ private fun ColumnScope.HistoryConversations(
     conversationState: List<ConversationModel>
 ) {
     val scope = rememberCoroutineScope()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var conversationToDelete by remember { mutableStateOf<ConversationModel?>(null) }
+
 
 
     LazyColumn(
@@ -306,33 +313,42 @@ private fun ColumnScope.HistoryConversations(
             .weight(1f, false),
     ) {
         items(conversationState.size) { index ->
-
-            println(currentConversationState)
-            print(conversationState)
-            print(conversationState[index].id)
             RecycleChatItem(
                 text = conversationState[index].title,
-                Icons.Filled.Message,
+                icon = Icons.Filled.Message,
                 selected = conversationState[index].id == currentConversationState,
-
-
-
                 onChatClicked = {
                     onChatClicked(conversationState[index].id)
-                    Log.d(ContentValues.TAG, " conversation  ID in appdrawer: ${conversationState[index].id}")
 
                     scope.launch {
                         onConversation(conversationState[index])
                     }
                 },
                 onDeleteClicked = {
-                    scope.launch {
-                        deleteConversation(conversationState[index].id)
-                    }
+                    conversationToDelete = conversationState[index]
+                    showDeleteDialog = true
+
                 }
             )
+            if (showDeleteDialog && conversationToDelete != null) {
+                DeleteConfirmationDialog(
+                    onConfirm = {
+                        scope.launch {
+                            deleteConversation(conversationState[index].id)
+                        }
+                        showDeleteDialog = false
+                        conversationToDelete = null
+                    },
+                    onDismiss = {
+                        showDeleteDialog = false
+                        conversationToDelete = null
+                    }
+                )
+            }
         }
     }
+
+
 }
 
 @Composable
@@ -408,7 +424,8 @@ private fun RecycleChatItem(
     icon: ImageVector = Icons.Filled.Edit,
     selected: Boolean,
     onChatClicked: () -> Unit,
-    onDeleteClicked: () -> Unit
+    onDeleteClicked: () -> Unit,
+
 ) {
     val background = if (selected) {
         Modifier.background(MaterialTheme.colorScheme.surfaceTint)
@@ -467,6 +484,7 @@ private fun RecycleChatItem(
                 )
                 .clickable { onDeleteClicked() }
         )
+
     }
 }
 
@@ -478,7 +496,52 @@ fun DividerItem(modifier: Modifier = Modifier) {
     )
 }
 
-
+@Composable
+fun DeleteConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.background,
+        title = {
+            Text(
+                "Confirm Deletion",
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Text(
+                "Are you sure you want to delete this conversation?",
+                color = MaterialTheme.colorScheme.surface,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.background
+                )
+            ) {
+                Text("Yes")
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.background
+                )
+            ) {
+                Text("No")
+            }
+        }
+    )
+}
 @Composable
 fun PreviewAppDrawerIn() {
     val navController = rememberNavController() // Add NavController to Preview
