@@ -2,6 +2,7 @@
 # This is generated automatically by the Android Gradle plugin.
 -keep class retrofit2.** { *; }
 -keep class okhttp3.** { *; }
+-keep class com.chatgptlite.wanted.models.ConversationModel { *; }
 -dontwarn retrofit2.**
 -dontwarn okhttp3.**
 -dontwarn java.sql.JDBCType

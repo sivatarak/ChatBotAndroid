@@ -73,6 +73,6 @@ data class Role(
 )
 
 object Config {
-    const val API_BASE_URL = "http://172.25.1.195:5001/"
+    const val API_BASE_URL = "http://172.25.1.237:5001/"
 }
 

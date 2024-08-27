@@ -1,11 +1,13 @@
 package com.chatgptlite.wanted
 
 import android.annotation.SuppressLint
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -31,6 +33,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.chatgptlite.wanted.constants.Agent
 import com.chatgptlite.wanted.constants.SessionManager
 import com.chatgptlite.wanted.ui.common.AppBar
@@ -48,18 +53,28 @@ import loginandsignup.SettingsScreen
 class MainActivity : ComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
     private val conversationViewModel: ConversationViewModel by viewModels()
-    private var darkTheme = false
+    private var darkTheme: Boolean = false
+
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Get the system's current theme
+        val currentNightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+
+        // Set darkTheme based on the system's theme
+        darkTheme = when (currentNightMode) {
+            Configuration.UI_MODE_NIGHT_YES -> true
+            else -> false
+        }
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val extras = intent.extras
         val agentID = extras?.getString("agentId")
         val launchNewChat = extras?.getBoolean("launchNewChat")
         val showAgentView = extras?.getBoolean("showAgent") ?: false
-        darkTheme = extras?.getBoolean("isDarkTheme") ?: false
+        darkTheme = extras?.getBoolean("isDarkTheme") ?: darkTheme // Use the system theme if not provided in extras
         agentID?.let {
             conversationViewModel.updateSelectedAgentId(it)
             conversationViewModel.clearConversation()
@@ -85,6 +100,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+
+
 @Composable
 fun MainContent(mainViewModel: MainViewModel, conversationViewModel: ConversationViewModel, darkTheme: Boolean, onThemeChange: (Boolean) -> Unit) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -93,7 +110,6 @@ fun MainContent(mainViewModel: MainViewModel, conversationViewModel: Conversatio
     val agentScreenOpen by mainViewModel.agentScreenOpen.collectAsState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-
     Log.d("AgentListFragment", "Using ViewModel instance in mainActivity: ${conversationViewModel.getInstanceId()}")
 
     if (drawerOpen) {

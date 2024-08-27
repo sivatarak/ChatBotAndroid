@@ -10,10 +10,12 @@
     <color name="gray_50">#404040</color>
 
     <!-- Light Theme Colors -->
-    <color name="button_surface_light">#FFBB86FC</color>
+    <color name="button_surface_light">#FFFFFFFF</color>
     <color name="button_text_light">#000000</color>
 
-    <!-- Dark Theme Colors -->
-    <color name="button_surface_dark">#FF6200EE</color>
-    <color name="button_text_dark">#FFFFFF</color>
+    <color name="button_surface_dark">#FF000000</color>
+    <color name="button_text_dark">#FFFFFFFF</color>
+
+    <!-- Theme color (for light theme) -->
+    <color name="theme_color">@color/black</color>
 </resources>

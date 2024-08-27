@@ -84,6 +84,30 @@ class ConversationViewModel @Inject constructor(
     private val _isInitializationFailed = MutableStateFlow(false)
     val isInitializationFailed: StateFlow<Boolean> = _isInitializationFailed.asStateFlow()
 
+
+    private val _progressLoad = MutableStateFlow(false)
+    val progressLoad: StateFlow<Boolean> = _progressLoad
+
+    fun setLoading(isLoading: Boolean) {
+        _progressLoad.value = isLoading
+    }
+
+
+    private val _email = MutableStateFlow("")
+    val email: StateFlow<String> = _email
+
+    private val _password = MutableStateFlow("")
+    val password: StateFlow<String> = _password
+
+    fun updateEmail(newEmail: String) {
+        _email.value = newEmail
+    }
+
+    fun updatePassword(newPassword: String) {
+        _password.value = newPassword
+    }
+
+
     fun setInitializationFailed(isFailed: Boolean) {
         _isInitializationFailed.value = isFailed
     }

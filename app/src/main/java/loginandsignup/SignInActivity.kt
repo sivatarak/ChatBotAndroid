@@ -1,5 +1,8 @@
 package loginandsignup
 
+
+import SignInScreen
+import ThemedButton
 import android.content.ContentValues
 import android.content.Intent
 import android.content.SharedPreferences
@@ -33,10 +36,12 @@ import android.view.contentcapture.ContentCaptureSessionId
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.ComposeView
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import com.chatgptlite.wanted.constants.LoginRequest
 import com.chatgptlite.wanted.constants.LoginResponse
+import com.chatgptlite.wanted.constants.QuestionReqData
 import com.chatgptlite.wanted.constants.SessionManager.sessionId
 import com.chatgptlite.wanted.ui.common.AgentsScreen
 import org.checkerframework.framework.qual.DefaultQualifierInHierarchy
@@ -46,44 +51,44 @@ import java.util.UUID
 @AndroidEntryPoint
 class SignInActivity : AppCompatActivity() {
 
-    private lateinit var emailEditText: EditText
-    private lateinit var passwordEditText: EditText
-    private lateinit var progressOverlay: View
-
+   // private lateinit var progressOverlay: View
     private val viewModel: ConversationViewModel by viewModels()
-//    @Composable
-//    fun MyComposableFunction(viewModel: ConversationViewModel) {
-//        val showAgent by viewModel.isShowAgent.collectAsState()
-//
-//        // Use showAgent here
-//    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sign_in)
 
-        // Initialize the UI components
-        emailEditText = findViewById(R.id.emailEt)
-        passwordEditText = findViewById(R.id.passET)
-        progressOverlay = findViewById(R.id.progress_overlay)
-
-        findViewById<View>(R.id.button).setOnClickListener {
-            val email = emailEditText.text.toString()
-            val pass = passwordEditText.text.toString()
-
-            if (email.isNotEmpty() && pass.isNotEmpty()) {
-                // Show the progress overlay
-                progressOverlay.visibility = View.VISIBLE
-
-                // Launch a coroutine from the Main dispatcher
-                CoroutineScope(Dispatchers.Main).launch {
-                    login(email, pass)
+        findViewById<ComposeView>(R.id.compose_view).setContent {
+            SignInScreen(
+                viewModel = viewModel,
+                onSignInClick = { email, password ->
+                    if (email.isNotEmpty() && password.isNotEmpty()) {
+                        viewModel.setLoading(true) // Show progress bar
+                        CoroutineScope(Dispatchers.Main).launch {
+                            try {
+                                login(email, password)
+                            } finally {
+                                viewModel.setLoading(false) // Hide progress bar
+                            }
+                        }
+                    } else {
+                        Toast.makeText(this@SignInActivity, "Empty Fields Are not Allowed !!", Toast.LENGTH_SHORT).show()
+                    }
                 }
-            } else {
-                Toast.makeText(this, "Empty Fields Are not Allowed !!", Toast.LENGTH_SHORT).show()
-            }
+            )
         }
     }
-    fun getDeviceHash(context: Context): String {
+
+//    private fun showProgressOverlay() {
+//        viewModel.progressLoad
+//        progressOverlay.visibility = View.VISIBLE
+//    }
+//
+//    private fun hideProgressOverlay() {
+//        progressOverlay.visibility = View.GONE
+//    }
+
+fun getDeviceHash(context: Context): String {
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
     }
 
@@ -91,20 +96,6 @@ class SignInActivity : AppCompatActivity() {
         return UUID.randomUUID().toString()
     }
 
-    private fun setEditTextsEnabled(enabled: Boolean) {
-        emailEditText.isEnabled = enabled
-        passwordEditText.isEnabled = enabled
-    }
-
-    private fun showProgressOverlay() {
-        progressOverlay.visibility = View.VISIBLE
-        setEditTextsEnabled(false)
-    }
-
-    private fun hideProgressOverlay() {
-        progressOverlay.visibility = View.GONE
-        setEditTextsEnabled(true)
-    }
 
     private val json = Json {
         ignoreUnknownKeys = true // This will ignore unknown keys during deserialization
@@ -112,7 +103,7 @@ class SignInActivity : AppCompatActivity() {
     private suspend fun login(username: String, password: String) {
         val sharedPreferences: SharedPreferences = getSharedPreferences("user_prefs", MODE_PRIVATE)
         val isLoggedIn = sharedPreferences.getBoolean("is_logged_in", false) // Changed default to false
-        showProgressOverlay()
+        viewModel.setLoading(true)
         val deviceHash = getDeviceHash(this)
         val sessionId = generateSessionId()
 
@@ -136,7 +127,7 @@ class SignInActivity : AppCompatActivity() {
                         if (statusCode == 404) {
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(this@SignInActivity, "Invalid credentials", Toast.LENGTH_SHORT).show()
-                                progressOverlay.visibility = View.GONE
+                                viewModel.setLoading(false)
                             }
                             return@launch
                         }
@@ -227,13 +218,14 @@ class SignInActivity : AppCompatActivity() {
                     println("Exception: ${e.message}")
                     withContext(Dispatchers.Main) {
                         //handleLoginFailure()
+                        viewModel.setLoading(false)
                         Toast.makeText(this@SignInActivity, "Network error occurred, Try again", Toast.LENGTH_SHORT).show()
-                        progressOverlay.visibility = View.GONE
+
                     }
                 }finally {
                     // Hide progress overlay
                     withContext(Dispatchers.Main) {
-                        hideProgressOverlay()
+                      viewModel.setLoading(false)
                        // progressOverlay.visibility = View.GONE
                     }
                 }
@@ -251,10 +243,11 @@ class SignInActivity : AppCompatActivity() {
     }
 
     private fun handleLoginSuccess() {
-        progressOverlay.visibility = View.GONE
+        viewModel.setLoading(false)
         val agents = SessionManager.agents
+        val firstAgentName = agents.values.firstOrNull()?.name
         println("Agents: $agents")
-
+        getQuestionCards(firstAgentName ?: "Default Agent Name")
         openMainActivity()
     }
 
@@ -269,7 +262,7 @@ class SignInActivity : AppCompatActivity() {
 //        openMainActivity()
 
         Toast.makeText(this, "Invalid input arguments", Toast.LENGTH_SHORT).show()
-        progressOverlay.visibility = View.GONE
+        viewModel.setLoading(false)
     }
 
     object SignInUtils {
@@ -336,11 +329,45 @@ class SignInActivity : AppCompatActivity() {
         }
     }
 
-
+    fun getQuestionCards(agentId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val reqAgentId = SessionManager.agents.entries.find { it.value.name == agentId }?.key
+                if (reqAgentId != null) {
+                    println("Requesting question cards for agentId: $reqAgentId")
+                    val data = QuestionReqData(
+                        sessionId = sessionId,
+                        agentId = reqAgentId
+                    )
+                    val response = RetrofitInstance.apiService.getQuestionCards(data).execute()
+                    if (response.isSuccessful) {
+                        val responseBody = response.body()?.string()
+                        println("Response Body: $responseBody")
+                        val jsonResponse = JSONObject(responseBody)
+                        val questionsJsonArray = jsonResponse.getJSONArray("questions")
+                        val questions = mutableListOf<String>()
+                        for (i in 0 until questionsJsonArray.length()) {
+                            questions.add(questionsJsonArray.getString(i))
+                        }
+                        println("Question cards are: $questions")
+                        SessionManager.questions = questions
+                    } else {
+                        val errorBody = response.errorBody()?.string()
+                        println("Response was not successful. Error body: $errorBody")
+                    }
+                } else {
+                    println("Agent not found with name: $agentId")
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                println("An error occurred: ${e.message}")
+            }
+        }
+    }
 
 
     private fun openMainActivity() {
-        progressOverlay.visibility = View.GONE
+        viewModel.setLoading(false)
         val intent = Intent(this@SignInActivity, MainActivity::class.java)
         startActivity(intent)
         finish()
